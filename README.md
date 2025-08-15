@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/sergio-santiago">
-    <img src="github_banner.png" alt="GitHub banner" width="100%">
+    <img src="banner.png" alt="GitHub banner" width="100%">
   </a>
 </p>
 
@@ -17,7 +17,7 @@ _💬 › Let's talk about building better software._
 
 ---
 
-### 🚀 Working on [**Secture**](https://github.com/secture) · _Backend Engineer_
+### 🚀 Working on [**Secture Labs**](https://github.com/secture)
 
 ---
 
