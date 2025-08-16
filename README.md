@@ -34,7 +34,7 @@ _💬 › Let's talk about building better software._
   <p align="center">
     <img
       src="https://github-readme-stats.vercel.app/api/top-langs/?username=sergio-santiago&layout=compact&theme=tokyonight&hide_border=true&langs_count=10&hide=blade,html,css&card_width=500"
-      width="70%"
+      width="100%"
       alt="Top Languages"
     />
   </p>
@@ -51,7 +51,6 @@ _💬 › Let's talk about building better software._
 
 ---
 
-### 💡 Wisdom from The Matrix
 > **Do not try and bend the spoon. That's impossible. Instead, only try to realize the truth… There is no spoon.** — *The Matrix*  
 
 <sub>Understanding the problem is often more powerful than trying to force the solution.</sub>
