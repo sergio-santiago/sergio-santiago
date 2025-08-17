@@ -6,13 +6,13 @@
 
 ---
 
-## 👋 Hi, I'm Sergio Santiago Henares  
-Backend Engineer from Spain 🇪🇸  
+## Hi There, I'm Sergio!
+Backend Engineer from Spain 🇪🇸
 
-> 🏗 Crafting scalable, maintainable, and performant systems with  
-> **Hexagonal Architecture · DDD · CQRS**  
+> 🏗 Crafting scalable, maintainable, and performant systems with
+> **Hexagonal Architecture · DDD · CQRS**
 
-_💬 › Let's talk about building better software._  
+_💬 › Let's talk about building better software._
 
 ---
 
@@ -51,6 +51,6 @@ _💬 › Let's talk about building better software._
 
 ---
 
-> **Do not try and bend the spoon. That's impossible. Instead, only try to realize the truth… There is no spoon.** — *The Matrix*  
+> **Do not try and bend the spoon. That's impossible. Instead, only try to realize the truth… There is no spoon.** — *The Matrix*
 
 <sub>Understanding the problem is often more powerful than trying to force the solution.</sub>
