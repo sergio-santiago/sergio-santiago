@@ -6,7 +6,7 @@
 
 ---
 
-## 👋 Hi, I'm Sergio Santiago Henares  
+## Hi There, I'm Sergio! <img src="https://raw.githubusercontent.com/ABSphreak/ABSphreak/master/gifs/Hi.gif" width="25px">
 Backend Engineer from Spain 🇪🇸  
 
 > 🏗 Crafting scalable, maintainable, and performant systems with  
