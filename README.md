@@ -1,12 +1,12 @@
 <p align="center">
   <a href="https://github.com/sergio-santiago">
-    <img src="banner.png" alt="GitHub banner" width="100%">
+    <img src="./assets/banner.png" alt="GitHub banner" width="100%">
   </a>
 </p>
 
 ---
 
-## Hi There, I'm Sergio! <img src="https://raw.githubusercontent.com/ABSphreak/ABSphreak/master/gifs/Hi.gif" width="25px">
+## Hi There, I'm Sergio!&nbsp;&nbsp;<img src="./assets/hi.gif" width="30px">
 Backend Engineer from Spain 🇪🇸  
 
 > 🏗 Crafting scalable, maintainable, and performant systems with  
