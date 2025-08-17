@@ -6,7 +6,7 @@
 
 ---
 
-## Hi There, I'm Sergio!&nbsp;&nbsp;<img src="./assets/hi.gif" width="30px">
+<img src="./assets/hi_terminal_prompt.gif">
 Backend Engineer from Spain 🇪🇸  
 
 > 🏗 Crafting scalable, maintainable, and performant systems with  
