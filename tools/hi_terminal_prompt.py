@@ -16,7 +16,7 @@ class Config:
     All values are deterministic by default to ensure reproducible output.
     """
     # Canvas & styling
-    size: Tuple[int, int] = (500, 100)
+    size: Tuple[int, int] = (600, 100)
     padding_x: int = 32
     radius: int = 18
     bg: Tuple[int, int, int] = (24, 24, 26)
