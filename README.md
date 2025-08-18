@@ -7,7 +7,6 @@
 ---
 
 <img src="./assets/hi_terminal_prompt.gif" alt="Animated terminal prompt typing 'Hello World, I'm Sergio Santiago' with a glitch effect.">
-<br>
 Backend Engineer from Spain 🇪🇸  
 
 > 🏗 Crafting scalable, maintainable, and performant systems with  
