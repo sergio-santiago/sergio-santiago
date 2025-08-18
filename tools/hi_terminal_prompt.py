@@ -16,15 +16,15 @@ class Config:
     All values are deterministic by default to ensure reproducible output.
     """
     # Canvas & styling
-    size: Tuple[int, int] = (600, 100)
+    size: Tuple[int, int] = (550, 75)
     padding_x: int = 32
     radius: int = 18
     bg: Tuple[int, int, int] = (24, 24, 26)
     border: Tuple[int, int, int] = (70, 74, 82)
 
     # Text content & colors
-    prompt: str = "> "
-    text: str = "Hello World, I'm Sergio Santiago (^_^) "
+    prompt: str = " "
+    text: str = "Hello World, I'm Sergi󰋙 Santiag󰋙   "
     color_main: Tuple[int, int, int, int] = (60, 255, 120, 255)
     color_red: Tuple[int, int, int, int] = (255, 60, 100, 200)
     color_blue: Tuple[int, int, int, int] = (110, 200, 255, 200)
@@ -34,15 +34,15 @@ class Config:
 
     # Cursor
     cursor_char: str = "▋"
-    cursor_blink_frames: int = 6
+    cursor_blink_frames: int = 10
 
     # Timing
-    fps: int = 18
-    pause_final_seconds: float = 3.0
-    pause_empty_frames: int = 8
+    fps: int = 30
+    pause_final_seconds: float = 3.5
+    pause_empty_frames: int = 30
 
-    # Font (bundled, no fallbacks)
-    font_path: str = "assets/fonts/JetBrainsMono-Regular.ttf"
+    # Font
+    font_path: str = "assets/fonts/FiraCodeNerdFont-Regular.ttf"
     fit_min_size: int = 14
     fit_max_size: int = 42
 
@@ -55,7 +55,7 @@ class Config:
     master_palette_colors: int = 256  # global palette size (GIF max is 256)
 
     # Determinism
-    seed: int = 42
+    seed: int = 137
 
 
 def _frame_duration_ms(cfg: Config) -> int:
