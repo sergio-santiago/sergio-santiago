@@ -7,8 +7,9 @@
 ---
 
 <img src="./assets/hi_terminal_prompt.gif" alt="Animated terminal prompt typing 'Hello World, I'm Sergio Santiago' with a glitch effect.">
-Senior Backend Engineer from Spain 🇪🇸  
-Distributed Systems · Cloud & Container Platforms · AI-Augmented Development  
+
+### Senior Backend Engineer from Spain 🇪🇸  
+#### Distributed Systems · Cloud & Container Platforms · AI-Augmented Development  
 
 > 🏗 Crafting scalable, maintainable, and performant systems with  
 > **Hexagonal Architecture · DDD · CQRS**  
