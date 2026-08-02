@@ -17,6 +17,10 @@ class Config:
     """
     # Canvas & styling
     size: Tuple[int, int] = (900, 75)
+    # Keeps the panel off the canvas edge. Its border used to sit on the very
+    # first and last rows, so any downscale by the browser could resample them
+    # away and leave the panel looking cropped along the bottom.
+    margin: int = 2
     padding_x: int = 32
     radius: int = 18
     bg: Tuple[int, int, int] = (24, 24, 26)
@@ -105,6 +109,7 @@ class Config:
         return replace(
             self,
             size=(self.size[0] * s, self.size[1] * s),
+            margin=self.margin * s,
             padding_x=self.padding_x * s,
             radius=self.radius * s,
             fit_min_size=self.fit_min_size * s,
@@ -215,8 +220,14 @@ def draw_box(cfg: Config) -> Image.Image:
     img = Image.new("RGBA", (w * s, h * s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
 
-    bounds = [0, 0, w * s - 1, h * s - 1]
-    d.rounded_rectangle(bounds, radius=cfg.radius * s, fill=cfg.bg)
+    # The border first and all the way round, so the panel always has an edge.
+    # The rim light goes on top of it: it fades to a tenth of its strength at the
+    # bottom, so on its own the panel looked cut off down there.
+    mg = cfg.margin * s
+    bounds = [mg, mg, w * s - 1 - mg, h * s - 1 - mg]
+    d.rounded_rectangle(
+        bounds, radius=cfg.radius * s, fill=cfg.bg, outline=cfg.border, width=2 * s
+    )
     img = Image.alpha_composite(img, _rim(img.size, bounds, cfg, s))
     d = ImageDraw.Draw(img)
 

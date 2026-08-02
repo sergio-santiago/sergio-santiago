@@ -84,9 +84,17 @@ The message is a shell line and it is meant to be a true one. `&&` rather than
 `|`: a pipe only wires stdout to stdin, so the pipeline version would ship
 whether or not the tests passed, which is the opposite of the claim.
 
-The panel is glass: lit along the top edge, a wash of light fading down from it,
-and a soft diagonal sheen crossing where the traffic lights are not. None of it
-moves, and that is the only reason it is affordable. A halo around the text was the obvious idea and the
+The panel is glass: a border all the way round, a rim light over it that is
+bright on top and a tenth of that at the bottom, a wash of light fading down
+from the top edge, and a soft diagonal sheen crossing where the traffic lights
+are not. None of it moves, and that is the only reason it is affordable.
+
+Two things about that edge are load-bearing. The border and the rim light are
+separate layers, because the rim alone leaves the bottom at a tenth strength and
+the panel reads as cropped down there. And the panel sits two pixels inside the
+canvas rather than on its edge, because the browser scales the header down to
+whatever the column allows, and a border living on the last row of pixels can be
+resampled out of existence. A halo around the text was the obvious idea and the
 wrong one: it grows as the line types, so it differs on every frame, inter-frame
 compression collapses, and it cost 151 KB for something invisible at display
 size. Glowing traffic lights were tried too, and dropped: the halos merge and it
