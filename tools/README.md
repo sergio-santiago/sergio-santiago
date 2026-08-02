@@ -80,6 +80,14 @@ characters per frame instead of one. Backspacing was 46 of the 109 frames and th
 least interesting of them, and erasing fast is what a real terminal looks like
 anyway. The header ends up at 453 KB for twice the pixels.
 
+There is one glow, a wash of light across the top of the panel, and picking it
+came down to what animation costs. A halo around the text was the obvious idea
+and the wrong one: it grows as the line types, so it differs on every frame,
+inter-frame compression collapses, and it added 151 KB for something you cannot
+see at display size. The top light is drawn once into the panel and never
+changes, so the whole animation pays 27 KB for it. Anything static here is
+close to free; anything that moves is not.
+
 Output is deterministic: the glitch uses a fixed seed, so an unchanged config
 produces an unchanged file.
 

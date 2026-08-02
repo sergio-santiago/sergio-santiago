@@ -24,7 +24,7 @@ class Config:
 
     # Text content & colors
     prompt: str = "sergio-santiago  "  # a real shell prompt names its user
-    text: str = "deterministic beats clever   "
+    text: str = "deterministic beats clever"
     color_main: Tuple[int, int, int, int] = (60, 255, 120, 255)
     color_red: Tuple[int, int, int, int] = (255, 60, 100, 200)
     color_blue: Tuple[int, int, int, int] = (110, 200, 255, 200)
@@ -39,6 +39,10 @@ class Config:
     dot_radius: int = 8
     dot_gap: int = 13
     left_gutter: int = 100
+
+    # A wash of light across the top of the panel. See _light_from_above().
+    top_light: int = 26          # peak alpha, at the very top edge
+    top_light_falloff: float = 0.55  # fraction of the height it fades over
 
     # Glitch effect
     glitch_intensity: int = 1  # base pixel offset for RGB glitch layers
@@ -127,7 +131,11 @@ def load_font(size: int, cfg: Config) -> ImageFont.FreeTypeFont:
 
 def pick_font_for_width(max_width: int, cfg: Config) -> ImageFont.FreeTypeFont:
     """
-    Binary-search the largest font size such that (PROMPT + TEXT) fits in max_width.
+    Binary-search the largest font size such that the whole line fits in max_width.
+
+    The cursor counts. It used to fit by accident, on the back of three trailing
+    spaces in the message, which also left it stranded three characters past the
+    last word once the line was fully typed.
 
     This keeps the layout stable regardless of the chosen message.
     """
@@ -139,7 +147,7 @@ def pick_font_for_width(max_width: int, cfg: Config) -> ImageFont.FreeTypeFont:
     while lo <= hi:
         mid = (lo + hi) // 2
         f = load_font(mid, cfg)
-        w = d.textlength(cfg.prompt + cfg.text, font=f)
+        w = d.textlength(cfg.prompt + cfg.text + cfg.cursor_char, font=f)
         if w <= max_width:
             best = mid
             lo = mid + 1
@@ -172,7 +180,7 @@ def compute_metrics(font: ImageFont.FreeTypeFont, cfg: Config) -> tuple[int, int
     # traffic lights, which really are centred, it read as the dots being off.
     #
     # Measured on the full string so the baseline holds steady while it types.
-    top, bottom = font.getbbox(cfg.prompt + cfg.text)[1::2]
+    top, bottom = font.getbbox(cfg.prompt + cfg.text + cfg.cursor_char)[1::2]
     baseline_y = int((h - (top + bottom)) // 2)
 
     return w_prompt, baseline_y
@@ -215,7 +223,34 @@ def draw_box(cfg: Config) -> Image.Image:
         cx = cfg.padding_x * s + r + i * step
         d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=colour + (255,))
 
-    return img.resize((w, h), Image.LANCZOS) if s > 1 else img
+    img = img.resize((w, h), Image.LANCZOS) if s > 1 else img
+    return _light_from_above(img, cfg)
+
+
+def _light_from_above(panel: Image.Image, cfg: Config) -> Image.Image:
+    """
+    Wash a little light across the top of the panel so it reads as lit, not flat.
+
+    Deliberately the only glow in here. A halo around the text was the obvious
+    idea and it was the wrong one: it grows as the line types, so it differs on
+    every frame, and inter-frame compression collapsed. That cost 151 KB for
+    something invisible at display size. This is drawn once into the panel and
+    never changes, which costs 27 KB for the whole animation.
+    """
+    if not cfg.top_light:
+        return panel
+
+    w, h = panel.size
+    fade = max(1.0, h * cfg.top_light_falloff)
+    column = Image.new("L", (1, h))
+    for y in range(h):
+        column.putpixel((0, y), int(cfg.top_light * max(0.0, 1 - y / fade)))
+
+    wash = Image.new("RGBA", (w, h), (255, 255, 255, 0))
+    wash.putalpha(
+        Image.composite(column.resize((w, h)), Image.new("L", (w, h), 0), panel.split()[3])
+    )
+    return Image.alpha_composite(panel, wash)
 
 
 def draw_text_frame(
