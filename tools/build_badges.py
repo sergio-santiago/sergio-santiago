@@ -36,9 +36,15 @@ BADGES = ROOT / "assets/badges"
 SHIELDS = "https://img.shields.io/badge"
 TIMEOUT = 30
 
-# GitHub's dark background. Every colour below is measured against it.
+# Every colour below is measured twice, because a badge can fail in two ways.
+#
+# Too dark and the badge dissolves into GitHub's dark page: that is how five of
+# them shipped invisible. Too bright and shields.io's white label stops being
+# readable on top of it, which is not a dark-mode problem at all since the badge
+# carries its own background.
 DARK_BG = (0x0D, 0x11, 0x17)
-MIN_CONTRAST = 2.0
+MIN_PAGE_CONTRAST = 2.0
+MIN_LABEL_CONTRAST = 3.0  # a warning, not a failure: see check_colors()
 
 
 @dataclass(frozen=True)
@@ -112,9 +118,10 @@ GROUPS: dict[str, list[Badge]] = {
         Badge("Protobuf", "4285F4", "", local="brand/protobuf.svg"),
     ],
     "cloud": [
-        # shields.io will not serve the AWS mark. #FF9900 is the official orange;
-        # the badge's own #232F3E navy is invisible on a dark page.
-        Badge("AWS", "FF9900", "", local="brand/aws.svg"),
+        # shields.io will not serve the AWS mark. The badge's own #232F3E navy
+        # disappears on a dark page and Smile Orange #FF9900 is too bright to
+        # carry white text, so this is the orange the AWS console uses instead.
+        Badge("AWS", "EC7211", "", local="brand/aws.svg"),
         Badge("Google Cloud", "4285F4", "googlecloud"),
         Badge("Terraform", "844FBA", "terraform"),
         Badge("Docker", "2496ED", "docker"),
@@ -138,11 +145,33 @@ def luminance(rgb: tuple[int, int, int]) -> float:
     return 0.2126 * chan[0] + 0.7152 * chan[1] + 0.0722 * chan[2]
 
 
-def contrast(hex_color: str) -> float:
-    """Contrast ratio of a badge colour against GitHub's dark background."""
+def contrast(hex_color: str, against: tuple[int, int, int] = DARK_BG) -> float:
+    """Contrast ratio between a badge colour and something behind or on top of it."""
     rgb = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
-    hi, lo = sorted((luminance(rgb), luminance(DARK_BG)), reverse=True)
+    hi, lo = sorted((luminance(rgb), luminance(against)), reverse=True)
     return (hi + 0.05) / (lo + 0.05)
+
+
+def check_colors() -> list[str]:
+    """
+    Fail on a badge the page swallows. Only warn on a label that is hard to read.
+
+    The second check is a warning because most of the badges that trip it are
+    official brand colours, and shipping Go in something other than Go's cyan to
+    win half a contrast point would be the wrong trade.
+    """
+    fatal, warn = [], []
+    for badges in GROUPS.values():
+        for badge in badges:
+            page = contrast(badge.color)
+            label = contrast(badge.color, (0xFF, 0xFF, 0xFF))
+            if page < MIN_PAGE_CONTRAST:
+                fatal.append(f"{badge.label} at #{badge.color} is {page:.2f} against the page")
+            if label < MIN_LABEL_CONTRAST:
+                warn.append(f"{badge.label} at #{badge.color} is {label:.2f} under white text")
+    for line in warn:
+        print(f"  warning: {line}")
+    return fatal
 
 
 def data_uri(relative: str) -> str:
@@ -166,13 +195,10 @@ def fetch(badge: Badge) -> str:
 
 
 def main() -> None:
-    failures = []
+    failures = check_colors()
     for group, badges in GROUPS.items():
         (BADGES / group).mkdir(parents=True, exist_ok=True)
         for badge in badges:
-            ratio = contrast(badge.color)
-            if ratio < MIN_CONTRAST:
-                failures.append(f"{badge.label} at #{badge.color} is {ratio:.2f}")
             (BADGES / group / f"{badge.slug}.svg").write_text(fetch(badge))
         print(f"  {group:13} {len(badges):2} badges")
 
@@ -180,7 +206,7 @@ def main() -> None:
     print(f"{total} badges written to {BADGES.relative_to(ROOT)}/")
 
     if failures:
-        sys.exit("Below the " + f"{MIN_CONTRAST} contrast floor:\n  " + "\n  ".join(failures))
+        sys.exit(f"Below the {MIN_PAGE_CONTRAST} contrast floor:\n  " + "\n  ".join(failures))
 
 
 if __name__ == "__main__":
