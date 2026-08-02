@@ -39,7 +39,7 @@ class Config:
     # Timing
     fps: int = 30
     pause_final_seconds: float = 3.5
-    pause_empty_frames: int = 30
+    pause_empty_frames: int = 12
 
     # Font
     font_path: str = "assets/fonts/FiraCodeNerdFont-Regular.ttf"
