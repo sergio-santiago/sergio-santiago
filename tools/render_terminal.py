@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from typing import List, Optional, Tuple
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 import random
 import os
 import sys
@@ -215,17 +215,10 @@ def draw_box(cfg: Config) -> Image.Image:
     img = Image.new("RGBA", (w * s, h * s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
 
-    d.rounded_rectangle([0, 0, w * s - 1, h * s - 1], radius=cfg.radius * s, fill=cfg.bg)
-
-    # Glass reads as glass because of where the light lands, not because of
-    # transparency: bright along the top edge, barely there along the bottom.
-    for offset, alpha in ((0, cfg.rim_light), (h * s - 3 * s, cfg.rim_light // 4)):
-        d.rounded_rectangle(
-            [0, offset, w * s - 1, h * s - 1],
-            radius=cfg.radius * s,
-            outline=(255, 255, 255, alpha),
-            width=2 * s,
-        )
+    bounds = [0, 0, w * s - 1, h * s - 1]
+    d.rounded_rectangle(bounds, radius=cfg.radius * s, fill=cfg.bg)
+    img = Image.alpha_composite(img, _rim(img.size, bounds, cfg, s))
+    d = ImageDraw.Draw(img)
 
     r, cy = cfg.dot_radius * s, (h * s) // 2
     step = (2 * cfg.dot_radius + cfg.dot_gap) * s
@@ -235,6 +228,31 @@ def draw_box(cfg: Config) -> Image.Image:
 
     img = img.resize((w, h), Image.LANCZOS) if s > 1 else img
     return _sheen(_light_from_above(img, cfg), cfg)
+
+
+def _rim(size: tuple[int, int], bounds: list[int], cfg: Config, s: int) -> Image.Image:
+    """
+    Trace the edge once and fade it downwards, bright on top and faint below.
+
+    The first version drew two rounded rectangles, the second one three pixels
+    tall with an eighteen pixel radius. PIL cannot round a box shorter than its
+    own corners, so it laid the top edge of that box down as a straight line
+    running the full width of the canvas, straight through the transparent
+    corners. It showed up as a stray line under the panel.
+    """
+    rim = Image.new("RGBA", size, (0, 0, 0, 0))
+    ImageDraw.Draw(rim).rounded_rectangle(
+        bounds, radius=cfg.radius * s, outline=(255, 255, 255, 255), width=2 * s
+    )
+
+    height = size[1]
+    top, bottom = cfg.rim_light, cfg.rim_light // 4
+    fade = Image.new("L", (1, height))
+    for y in range(height):
+        fade.putpixel((0, y), int(top + (bottom - top) * y / height))
+
+    rim.putalpha(ImageChops.multiply(rim.split()[3], fade.resize(size)))
+    return rim
 
 
 def _sheen(panel: Image.Image, cfg: Config) -> Image.Image:
