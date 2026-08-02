@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from typing import List, Optional, Tuple
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 import random
 import os
 import sys
@@ -24,7 +24,7 @@ class Config:
 
     # Text content & colors
     prompt: str = "sergio-santiago  "  # a real shell prompt names its user
-    text: str = "deterministic beats clever"
+    text: str = "solve --deterministic | test | ship"
     color_main: Tuple[int, int, int, int] = (60, 255, 120, 255)
     color_red: Tuple[int, int, int, int] = (255, 60, 100, 200)
     color_blue: Tuple[int, int, int, int] = (110, 200, 255, 200)
@@ -40,9 +40,14 @@ class Config:
     dot_gap: int = 13
     left_gutter: int = 100
 
-    # A wash of light across the top of the panel. See _light_from_above().
-    top_light: int = 26          # peak alpha, at the very top edge
+    # How the panel catches light. See _light_from_above() and _sheen().
+    top_light: int = 26              # peak alpha of the wash, at the top edge
     top_light_falloff: float = 0.55  # fraction of the height it fades over
+    rim_light: int = 110             # alpha of the lit top edge
+    sheen: int = 20                  # alpha of the diagonal highlight
+    sheen_x: int = 430               # where it crosses, clear of the traffic lights
+    sheen_width: int = 130
+    sheen_blur: int = 20
 
     # Glitch effect
     glitch_intensity: int = 1  # base pixel offset for RGB glitch layers
@@ -106,6 +111,9 @@ class Config:
             dot_radius=self.dot_radius * s,
             dot_gap=self.dot_gap * s,
             left_gutter=self.left_gutter * s,
+            sheen_x=self.sheen_x * s,
+            sheen_width=self.sheen_width * s,
+            sheen_blur=self.sheen_blur * s,
             scale=1,
         )
 
@@ -188,11 +196,15 @@ def compute_metrics(font: ImageFont.FreeTypeFont, cfg: Config) -> tuple[int, int
 
 def draw_box(cfg: Config) -> Image.Image:
     """
-    Draw the rounded background panel with a subtle inner highlight.
+    Draw the panel: rounded, lit from above, with a sheen across the glass.
 
-    Drawn at cfg.supersample times the final size and then reduced, because
-    PIL's rounded_rectangle barely antialiases: straight from the draw call the
-    corner had a single intermediate alpha step, which reads as a staircase.
+    Everything here is drawn at cfg.supersample times the final size and then
+    reduced, because PIL antialiases almost nothing. Straight from the draw call
+    the corner had a single intermediate alpha step and read as a staircase, and
+    the three traffic lights were worse.
+
+    None of it changes between frames, which is the whole reason it can afford
+    to be this involved. See _sheen() for what happens when it does.
 
     Returns an RGBA image used as the base layer for each frame.
     """
@@ -201,22 +213,18 @@ def draw_box(cfg: Config) -> Image.Image:
     img = Image.new("RGBA", (w * s, h * s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
 
-    d.rounded_rectangle(
-        [0, 0, w * s - 1, h * s - 1],
-        radius=cfg.radius * s,
-        fill=cfg.bg,
-        outline=cfg.border,
-        width=2 * s,
-    )
-    d.rounded_rectangle(
-        [2 * s, 2 * s, w * s - 3 * s, h * s - 3 * s],
-        radius=(cfg.radius - 2) * s,
-        outline=(255, 255, 255, 28),
-        width=1 * s,
-    )
-    # Drawn before the reduction, like everything else here. PIL's ellipse is no
-    # better antialiased than its rounded_rectangle, and three small circles are
-    # where that shows most.
+    d.rounded_rectangle([0, 0, w * s - 1, h * s - 1], radius=cfg.radius * s, fill=cfg.bg)
+
+    # Glass reads as glass because of where the light lands, not because of
+    # transparency: bright along the top edge, barely there along the bottom.
+    for offset, alpha in ((0, cfg.rim_light), (h * s - 3 * s, cfg.rim_light // 4)):
+        d.rounded_rectangle(
+            [0, offset, w * s - 1, h * s - 1],
+            radius=cfg.radius * s,
+            outline=(255, 255, 255, alpha),
+            width=2 * s,
+        )
+
     r, cy = cfg.dot_radius * s, (h * s) // 2
     step = (2 * cfg.dot_radius + cfg.dot_gap) * s
     for i, colour in enumerate(cfg.dots):
@@ -224,7 +232,31 @@ def draw_box(cfg: Config) -> Image.Image:
         d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=colour + (255,))
 
     img = img.resize((w, h), Image.LANCZOS) if s > 1 else img
-    return _light_from_above(img, cfg)
+    return _sheen(_light_from_above(img, cfg), cfg)
+
+
+def _sheen(panel: Image.Image, cfg: Config) -> Image.Image:
+    """
+    Sweep a soft diagonal highlight across the panel, the way light crosses glass.
+
+    Kept clear of the traffic lights: the first attempt put it right over them
+    and it looked like a smudge rather than a reflection.
+    """
+    if not cfg.sheen:
+        return panel
+
+    w, h = panel.size
+    streak = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    x = cfg.sheen_x
+    ImageDraw.Draw(streak).polygon(
+        [(x, 0), (x + cfg.sheen_width, 0), (x + cfg.sheen_width - h, h), (x - h, h)],
+        fill=(255, 255, 255, cfg.sheen),
+    )
+    streak = streak.filter(ImageFilter.GaussianBlur(cfg.sheen_blur))
+    streak.putalpha(
+        Image.composite(streak.split()[3], Image.new("L", (w, h), 0), panel.split()[3])
+    )
+    return Image.alpha_composite(panel, streak)
 
 
 def _light_from_above(panel: Image.Image, cfg: Config) -> Image.Image:

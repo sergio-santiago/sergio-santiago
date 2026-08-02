@@ -80,13 +80,18 @@ characters per frame instead of one. Backspacing was 46 of the 109 frames and th
 least interesting of them, and erasing fast is what a real terminal looks like
 anyway. The header ends up at 453 KB for twice the pixels.
 
-There is one glow, a wash of light across the top of the panel, and picking it
-came down to what animation costs. A halo around the text was the obvious idea
-and the wrong one: it grows as the line types, so it differs on every frame,
-inter-frame compression collapses, and it added 151 KB for something you cannot
-see at display size. The top light is drawn once into the panel and never
-changes, so the whole animation pays 27 KB for it. Anything static here is
-close to free; anything that moves is not.
+The panel is glass: lit along the top edge, a wash of light fading down from it,
+and a soft diagonal sheen crossing where the traffic lights are not. None of it
+moves, and that is the only reason it is affordable. A halo around the text was the obvious idea and the
+wrong one: it grows as the line types, so it differs on every frame, inter-frame
+compression collapses, and it cost 151 KB for something invisible at display
+size. Glowing traffic lights were tried too, and dropped: the halos merge and it
+reads as keyboard lighting.
+
+Static is not quite free either, though. The sheen never changes, but the text
+runs over it, so every region the typing touches has to carry the gradient
+underneath. That is 133 KB of the 459. Over a flat panel the same animation is
+326. The trade was taken on purpose.
 
 Output is deterministic: the glitch uses a fixed seed, so an unchanged config
 produces an unchanged file.
