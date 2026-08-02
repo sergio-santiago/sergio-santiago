@@ -52,9 +52,22 @@ class Config:
 
     # Text content & colors
     prompt: str = "sergio-santiago  "  # a real shell prompt names its user
-    # && rather than |: a pipe only wires stdout to stdin, so it would ship
-    # whether or not the tests passed. This line is true if you run it.
-    text: str = "solve --deterministic && test && ship"
+    # The line is meant to be true if you run it, and three attempts at it were
+    # not.
+    #
+    # && rather than |, because a pipe only wires stdout to stdin and would ship
+    # whether or not what came before succeeded. && rather than > for a worse
+    # version of the same reason: a redirect does not run the next word at all,
+    # it creates a file named after it, and it quietly steals the preceding
+    # command's flags on the way.
+    #
+    # And no bare `test`, which is what this line used to say. test is a shell
+    # builtin and with no arguments it returns false, so the chain stopped there
+    # and never reached ship. The claim is carried by the TDD badge and by the
+    # repositories that actually have tests.
+    #
+    # None of understand, solve or ship is a builtin, so nothing short-circuits.
+    text: str = "understand && solve --deterministic && ship"
     color_main: Tuple[int, int, int, int] = (60, 255, 120, 255)
     color_red: Tuple[int, int, int, int] = (255, 60, 100, 200)
     color_blue: Tuple[int, int, int, int] = (110, 200, 255, 200)
