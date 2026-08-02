@@ -16,18 +16,29 @@ class Config:
     All values are deterministic by default to ensure reproducible output.
     """
     # Canvas & styling
-    size: Tuple[int, int] = (720, 75)
+    size: Tuple[int, int] = (900, 75)
     padding_x: int = 32
     radius: int = 18
     bg: Tuple[int, int, int] = (24, 24, 26)
     border: Tuple[int, int, int] = (70, 74, 82)
 
     # Text content & colors
-    prompt: str = " "
-    text: str = "I work on the hard problems of money at scale   "
+    prompt: str = "sergio  "  # a real shell prompt names its user
+    text: str = "deterministic beats clever   "
     color_main: Tuple[int, int, int, int] = (60, 255, 120, 255)
     color_red: Tuple[int, int, int, int] = (255, 60, 100, 200)
     color_blue: Tuple[int, int, int, int] = (110, 200, 255, 200)
+
+    # Window chrome: the three macOS traffic lights, and the room they need
+    # before the prompt starts.
+    dots: Tuple[Tuple[int, int, int], ...] = (
+        (255, 95, 86),   # close
+        (255, 189, 46),  # minimise
+        (39, 201, 63),   # zoom
+    )
+    dot_radius: int = 8
+    dot_gap: int = 13
+    left_gutter: int = 100
 
     # Glitch effect
     glitch_intensity: int = 1  # base pixel offset for RGB glitch layers
@@ -88,6 +99,9 @@ class Config:
             fit_min_size=self.fit_min_size * s,
             fit_max_size=self.fit_max_size * s,
             glitch_intensity=self.glitch_intensity * s,
+            dot_radius=self.dot_radius * s,
+            dot_gap=self.dot_gap * s,
+            left_gutter=self.left_gutter * s,
             scale=1,
         )
 
@@ -186,7 +200,14 @@ def draw_box(cfg: Config) -> Image.Image:
         outline=(255, 255, 255, 28),
         width=1 * s,
     )
-    return img.resize((w, h), Image.LANCZOS) if s > 1 else img
+    img = img.resize((w, h), Image.LANCZOS) if s > 1 else img
+
+    d = ImageDraw.Draw(img)
+    r, cy = cfg.dot_radius, h // 2
+    for i, colour in enumerate(cfg.dots):
+        cx = cfg.padding_x + r + i * (2 * r + cfg.dot_gap)
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=colour + (255,))
+    return img
 
 
 def draw_text_frame(
@@ -217,7 +238,7 @@ def draw_text_frame(
     img = base.copy()
     d = ImageDraw.Draw(img)
 
-    x = cfg.padding_x
+    x = cfg.padding_x + cfg.left_gutter
     y = baseline_y
 
     # Prompt in main color
@@ -275,7 +296,7 @@ def render(cfg: Config) -> str:
 
     # Resources
     w, _ = cfg.size
-    font = pick_font_for_width(w - 2 * cfg.padding_x, cfg)
+    font = pick_font_for_width(w - 2 * cfg.padding_x - cfg.left_gutter, cfg)
     prompt_w, baseline_y = compute_metrics(font, cfg)
     panel = draw_box(cfg)
 

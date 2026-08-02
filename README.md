@@ -1,4 +1,4 @@
-<img src="./assets/terminal.webp" width="720" alt="Animated terminal prompt typing 'I work on the hard problems of money at scale'">
+<img src="./assets/terminal.webp" width="900" alt="Animated terminal prompt reading: sergio, deterministic beats clever">
 
 ### Senior Backend Engineer from Spain 🇪🇸
 #### Distributed Systems & High Traffic · Payments · Architecture (Hexagonal · DDD · CQRS)
