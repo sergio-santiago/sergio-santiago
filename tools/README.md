@@ -7,7 +7,7 @@ nothing is fetched from a third party at page-view time.
 ```sh
 make            # list the targets
 make install    # create .venv and install Pillow
-make assets     # rebuild the badges and the terminal GIF
+make assets     # rebuild the badges and the animated header
 ```
 
 ## Why the assets are committed
@@ -69,16 +69,24 @@ image pixel while the text beside it gets four, and the panel looked soft next t
 everything else. `Config.scale` handles it: every measurement above it is in CSS
 pixels and gets multiplied on the way in.
 
-Lossless because it is also the smaller file, which sounds backwards until you look
-at what is being encoded. Flat text on a flat panel is what lossless handles best,
-and lossy compression answers with noise, which is exactly what destroys the
-frame-to-frame compression. Measured on this header: lossless 381 KB, lossy at
-quality 92 459 KB, GIF 398 KB.
+Lossless because the text has to stay clean. It used to be the smaller file as
+well, and it was, for as long as nothing on the panel moved. That stopped being
+true once the reflection started travelling: lossy at quality 90 now comes out
+185 KB lighter. It also comes out dirtier, with the noise collecting exactly
+where the glyphs meet the background, and the entire reason this is rendered at
+twice its display size is crispness. Measured on this header: lossless 778 KB,
+lossy at quality 95 705 KB, at quality 90 593 KB.
+
+Two encoder flags are worth naming because they cost nothing at all.
+`minimize_size` lets libwebp spend longer looking for a smaller encoding of each
+frame, and `kmin`/`kmax` at zero forbid it from inserting keyframes, every one of
+which is a full re-encode of a panel that has barely changed. Together they take
+46 KB off.
 
 Doubling the resolution would have doubled the file too, so the erase runs four
 characters per frame instead of one. Backspacing was 46 of the 109 frames and the
 least interesting of them, and erasing fast is what a real terminal looks like
-anyway. The header ends up at 453 KB for twice the pixels.
+anyway.
 
 The message is a shell line and it is meant to be a true one. `&&` rather than
 `|`: a pipe only wires stdout to stdin, so the pipeline version would ship
@@ -86,8 +94,9 @@ whether or not the tests passed, which is the opposite of the claim.
 
 The panel is glass: a border all the way round, a rim light over it that is
 bright on top and a tenth of that at the bottom, a wash of light fading down
-from the top edge, and a soft diagonal sheen crossing where the traffic lights
-are not. None of it moves, and that is the only reason it is affordable.
+from the top edge, and a soft diagonal reflection resting clear of the traffic
+lights. All of it but the reflection is drawn once and never touched again,
+which is the only reason it can afford to be this involved.
 
 Two things about that edge are load-bearing. The border and the rim light are
 separate layers, because the rim alone leaves the bottom at a tenth strength and
@@ -100,10 +109,27 @@ compression collapses, and it cost 151 KB for something invisible at display
 size. Glowing traffic lights were tried too, and dropped: the halos merge and it
 reads as keyboard lighting.
 
-Static is not quite free either, though. The sheen never changes, but the text
-runs over it, so every region the typing touches has to carry the gradient
-underneath. That is roughly 130 KB of the total. Over a flat panel the same
-animation is a third lighter. The trade was taken on purpose.
+The reflection is the exception, and it is the expensive half of the file. Once
+per loop, while the line rests, it drifts the whole way round the glass and
+settles back where it started. Two bands are drawn a period apart, so whatever
+leaves by one edge is already arriving at the other and the loop closes on
+itself with nothing to hide.
+
+What that costs is worth writing down, because it is not what you would guess.
+Every distinct position of the reflection costs around ten kilobytes, and how far
+it moved to reach that position makes no difference at all: the encoder rewrites
+the whole band either way. So the header is roughly 455 KB plus ten per position,
+and none of the obvious economies move it much. Dropping the highlight's alpha
+from 48 to 18 saved 46 KB. Narrowing the band saved fifteen per cent. Fading it
+out below the halfway line saved more than either, and was thrown out anyway,
+because a reflection cut off at half height stops reading as light crossing glass
+and starts reading as a smudge.
+
+Thirty positions, each held for three frames, is what the budget buys: a trip of
+three seconds, and 778 KB. Sixty would be visibly smoother and another 300 KB.
+The same thirty positions spent on a short drift out and back instead of a full
+circuit cost exactly the same and move far more smoothly, which is what
+`Config.sheen_span` is for if that trade ever looks better than this one.
 
 Output is deterministic: the glitch uses a fixed seed, so an unchanged config
 produces an unchanged file.

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import List, Optional, Tuple
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+import math
 import random
 import os
 import sys
@@ -51,16 +52,28 @@ class Config:
     top_light_falloff: float = 0.55  # fraction of the height it fades over
     rim_light: int = 110             # alpha of the lit top edge
     sheen: int = 20                  # alpha of the diagonal highlight
-    sheen_x: int = 430               # where it crosses, clear of the traffic lights
+    sheen_x: int = 430               # where it rests, clear of the traffic lights
     sheen_width: int = 130
     sheen_blur: int = 20
+
+    # The reflection can drift the whole way round the glass and settle back
+    # where it started, once per loop, while the line rests. It is the only
+    # thing besides the text that moves, and moving is what costs bytes here,
+    # so it is bounded on purpose. See _sheen_drift().
+    sheen_steps: int = 30            # distinct positions along the drift, 0 parks it
+    sheen_hold: int = 3              # frames each position is held for
+    sheen_delay: int = 12            # frames of stillness before it sets off
+    sheen_span: int = 0              # how far it drifts and back, 0 goes all the way round
 
     # Glitch effect
     glitch_intensity: int = 1  # base pixel offset for RGB glitch layers
 
-    # Cursor
+    # Cursor. The gap is a little air between the last character and the block,
+    # the way a terminal cell leaves some: butted straight up against the text it
+    # reads as part of the word rather than as a caret waiting for the next one.
     cursor_char: str = "▋"
     cursor_blink_frames: int = 10
+    cursor_gap: int = 5
 
     # Rendering scale. Everything above is in CSS pixels, the size the header is
     # shown at. The file is rendered this many times larger and displayed with an
@@ -90,9 +103,11 @@ class Config:
     # the alpha channel, which left a black square behind every corner. WebP
     # carries real alpha, so the corners sit on whatever colour the page uses.
     #
-    # Lossless is also the smaller file here, which looks backwards until you
-    # remember this is flat text on a flat panel: lossy adds noise, and noise is
-    # exactly what kills the frame-to-frame compression.
+    # Lossless was once the smaller file too, back when nothing on the panel
+    # moved. It is not any more: with the reflection travelling, quality 90 comes
+    # out 185 KB lighter. It also puts noise right where the glyphs meet the
+    # background, and rendering at 2x was all about keeping those edges clean, so
+    # the 185 KB is the price of being consistent about it.
     out_path: str = "assets/terminal.webp"
     loop: int = 0
     supersample: int = 4  # the panel is drawn this much larger, then reduced
@@ -121,6 +136,8 @@ class Config:
             sheen_x=self.sheen_x * s,
             sheen_width=self.sheen_width * s,
             sheen_blur=self.sheen_blur * s,
+            sheen_span=self.sheen_span * s,
+            cursor_gap=self.cursor_gap * s,
             scale=1,
         )
 
@@ -162,7 +179,7 @@ def pick_font_for_width(max_width: int, cfg: Config) -> ImageFont.FreeTypeFont:
     while lo <= hi:
         mid = (lo + hi) // 2
         f = load_font(mid, cfg)
-        w = d.textlength(cfg.prompt + cfg.text + cfg.cursor_char, font=f)
+        w = d.textlength(cfg.prompt + cfg.text + cfg.cursor_char, font=f) + cfg.cursor_gap
         if w <= max_width:
             best = mid
             lo = mid + 1
@@ -203,15 +220,16 @@ def compute_metrics(font: ImageFont.FreeTypeFont, cfg: Config) -> tuple[int, int
 
 def draw_box(cfg: Config) -> Image.Image:
     """
-    Draw the panel: rounded, lit from above, with a sheen across the glass.
+    Draw the panel: rounded, edged and lit from above, but with no reflection.
 
     Everything here is drawn at cfg.supersample times the final size and then
     reduced, because PIL antialiases almost nothing. Straight from the draw call
     the corner had a single intermediate alpha step and read as a staircase, and
     the three traffic lights were worse.
 
-    None of it changes between frames, which is the whole reason it can afford
-    to be this involved. See _sheen() for what happens when it does.
+    None of it ever changes, which is the whole reason it can afford to be this
+    involved, and it is why the reflection is added afterwards rather than here:
+    that one can move. See _sheen_drift().
 
     Returns an RGBA image used as the base layer for each frame.
     """
@@ -238,7 +256,7 @@ def draw_box(cfg: Config) -> Image.Image:
         d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=colour + (255,))
 
     img = img.resize((w, h), Image.LANCZOS) if s > 1 else img
-    return _sheen(_light_from_above(img, cfg), cfg)
+    return _light_from_above(img, cfg)
 
 
 def _rim(size: tuple[int, int], bounds: list[int], cfg: Config, s: int) -> Image.Image:
@@ -266,19 +284,15 @@ def _rim(size: tuple[int, int], bounds: list[int], cfg: Config, s: int) -> Image
     return rim
 
 
-def _sheen(panel: Image.Image, cfg: Config) -> Image.Image:
+def _streak(panel: Image.Image, x: int, cfg: Config) -> Image.Image:
     """
-    Sweep a soft diagonal highlight across the panel, the way light crosses glass.
+    Lay the soft diagonal band of light over the panel and clip it to the glass.
 
-    Kept clear of the traffic lights: the first attempt put it right over them
-    and it looked like a smudge rather than a reflection.
+    The band leans by exactly the panel height, so it reads as one plane of light
+    crossing at 45 degrees rather than as a vertical bar.
     """
-    if not cfg.sheen:
-        return panel
-
     w, h = panel.size
     streak = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    x = cfg.sheen_x
     ImageDraw.Draw(streak).polygon(
         [(x, 0), (x + cfg.sheen_width, 0), (x + cfg.sheen_width - h, h), (x - h, h)],
         fill=(255, 255, 255, cfg.sheen),
@@ -288,6 +302,84 @@ def _sheen(panel: Image.Image, cfg: Config) -> Image.Image:
         Image.composite(streak.split()[3], Image.new("L", (w, h), 0), panel.split()[3])
     )
     return Image.alpha_composite(panel, streak)
+
+
+def _sheen_period(panel: Image.Image, cfg: Config) -> int:
+    """
+    The distance the reflection travels to come back to where it started.
+
+    Panel width plus the band's own lean plus its width: everything it needs to
+    leave by one edge and arrive at the other with nothing showing in between.
+    """
+    return panel.size[0] + panel.size[1] + cfg.sheen_width
+
+
+def _sheen(panel: Image.Image, cfg: Config, offset: int = 0) -> Image.Image:
+    """
+    Place the reflection, offset pixels along from its resting position.
+
+    Kept clear of the traffic lights when parked: the first attempt put it right
+    over them and it looked like a smudge rather than a reflection.
+
+    Two bands are laid down, one period apart, so that whatever leaves by the
+    right edge is already arriving at the left one. Only one of them is ever over
+    the glass, and at offset zero the other is well off the canvas, which is why
+    a parked reflection costs exactly what it always did.
+    """
+    if not cfg.sheen:
+        return panel
+
+    period = _sheen_period(panel, cfg)
+    for x in (cfg.sheen_x + offset, cfg.sheen_x + offset - period):
+        panel = _streak(panel, x, cfg)
+    return panel
+
+
+def _sheen_drift(panel: Image.Image, cfg: Config) -> List[Image.Image]:
+    """
+    Pre-render the reflection's round trip, one panel per position.
+
+    Takes the panel without a reflection and returns it with one, moved a little
+    further along each time. This is the expensive half of the header, and the
+    only thing besides the text that changes between frames, so it is bounded on
+    purpose: it runs during the rest pause and nowhere else. While the line is
+    typing there is already something to look at, and a highlight moving under
+    changing text is the worst case there is for inter-frame compression, because
+    the two changed regions never coincide.
+
+    The travel is eased at both ends. Light on a surface does not start and stop
+    at full speed, and a linear pass reads as a wipe rather than a reflection.
+    The easing also means the drift is at its slowest right where it hands back
+    to the parked panel, so the two meet without a visible step.
+
+    What the budget really buys is positions, not distance: every distinct one is
+    a frame the encoder has to spend around ten kilobytes on, whether the band
+    moved a hundred pixels or ten. That is why sheen_span exists. Going all the
+    way round is twenty two hundred pixels, and covering that smoothly needs more
+    positions than the file can afford, so the alternative is a shorter drift out
+    and back, which the same number of positions can cover without stepping.
+    """
+    if not cfg.sheen or cfg.sheen_steps <= 0:
+        return []
+
+    if cfg.sheen_span:
+        # Out and back. A cosine turns around smoothly at both ends and returns
+        # to exactly zero, so the loop closes on the parked panel by itself.
+        offsets = [
+            int(cfg.sheen_span * (1 - math.cos(2 * math.pi * i / cfg.sheen_steps)) / 2)
+            for i in range(cfg.sheen_steps)
+        ]
+    else:
+        # All the way round, smoothstepped. Deliberately not steps - 1: the last
+        # position stops just short of home, because home is the frame the
+        # animation returns to on its own.
+        period = _sheen_period(panel, cfg)
+        offsets = [
+            int(period * (t * t * (3 - 2 * t)))
+            for t in (i / cfg.sheen_steps for i in range(cfg.sheen_steps))
+        ]
+
+    return [_sheen(panel, cfg, off) for off in offsets]
 
 
 def _light_from_above(panel: Image.Image, cfg: Config) -> Image.Image:
@@ -361,7 +453,10 @@ def draw_text_frame(
     # Cursor
     if cursor_on:
         w_typed = d.textlength(typed, font=font)
-        d.text((x + prompt_w + w_typed, y), cfg.cursor_char, font=font, fill=cfg.color_main)
+        d.text(
+            (x + prompt_w + w_typed + cfg.cursor_gap, y),
+            cfg.cursor_char, font=font, fill=cfg.color_main,
+        )
 
     return img
 
@@ -387,24 +482,21 @@ def build_sequence(
     return forward + pause_full + backward + pause_empty
 
 
-def render(cfg: Config) -> str:
+def build_frames(cfg: Config) -> List[Image.Image]:
     """
-    Render the animated header and write it to cfg.out_path.
+    Render every frame of the animation as RGBA, in order.
 
-    Returns:
-        Output path of the generated file.
+    Expects an already-scaled config.
     """
-    cfg = cfg.scaled()
-
-    # Timing
-    frame_ms = _frame_duration_ms(cfg)
     pause_full_frames = int(cfg.fps * cfg.pause_final_seconds)
 
     # Resources
     w, _ = cfg.size
     font = pick_font_for_width(w - 2 * cfg.padding_x - cfg.left_gutter, cfg)
     prompt_w, baseline_y = compute_metrics(font, cfg)
-    panel = draw_box(cfg)
+    bare = draw_box(cfg)
+    panel = _sheen(bare, cfg)          # the reflection at rest
+    drift = _sheen_drift(bare, cfg)    # and every position of its round trip
 
     # Build frame sequence (render RGBA frames first)
     random.seed(cfg.seed)
@@ -430,24 +522,57 @@ def render(cfg: Config) -> str:
         cursor_on = (i // cfg.cursor_blink_frames) % 2 == 0
         typed = cfg.text[:text_len]
 
+        # The highlight only travels while the line rests, so most frames still
+        # share the one panel that was drawn up front.
+        # Every distinct position is a frame the encoder cannot share with its
+        # neighbour, so holding each one for a couple of frames buys back most of
+        # the cost without making the trip any quicker.
+        since = i - typing_end - cfg.sheen_delay
+        step = since // max(1, cfg.sheen_hold)
+        base = (
+            drift[step]
+            if in_pause_full and since >= 0 and step < len(drift)
+            else panel
+        )
+
         fr_rgba = draw_text_frame(
-            panel, typed, cursor_on, red_off, blue_off, font, prompt_w, baseline_y, cfg
+            base, typed, cursor_on, red_off, blue_off, font, prompt_w, baseline_y, cfg
         )
         frames_rgba.append(fr_rgba)
+
+    return frames_rgba
+
+
+def render(cfg: Config) -> str:
+    """
+    Render the animated header and write it to cfg.out_path.
+
+    Returns:
+        Output path of the generated file.
+    """
+    cfg = cfg.scaled()
+    frames = build_frames(cfg)
 
     # Straight to WebP, keeping every frame in RGBA. There is no quantisation
     # step and no master palette any more: both existed to survive GIF's 256
     # colours, and both are what forced the alpha channel to be thrown away.
-    frames_rgba[0].save(
+    #
+    # kmin/kmax at zero tell libwebp never to insert a keyframe. Its default is
+    # one every so often, and here every one of them is a full re-encode of a
+    # panel that has not changed.
+    frames[0].save(
         cfg.out_path,
         format="WEBP",
         save_all=True,
-        append_images=frames_rgba[1:],
+        append_images=frames[1:],
         loop=cfg.loop,
-        duration=frame_ms,
+        duration=_frame_duration_ms(cfg),
         lossless=True,
         method=6,
         exact=True,  # do not touch RGB under transparent pixels
+        minimize_size=True,
+        kmin=0,
+        kmax=0,
     )
     return cfg.out_path
 
