@@ -16,7 +16,7 @@ class Config:
     All values are deterministic by default to ensure reproducible output.
     """
     # Canvas & styling
-    size: Tuple[int, int] = (550, 75)
+    size: Tuple[int, int] = (720, 75)
     padding_x: int = 32
     radius: int = 18
     bg: Tuple[int, int, int] = (24, 24, 26)
@@ -24,7 +24,7 @@ class Config:
 
     # Text content & colors
     prompt: str = " "
-    text: str = "Hello World, I'm Sergi󰋙 Santiag󰋙   "
+    text: str = "I work on the hard problems of money at scale   "
     color_main: Tuple[int, int, int, int] = (60, 255, 120, 255)
     color_red: Tuple[int, int, int, int] = (255, 60, 100, 200)
     color_blue: Tuple[int, int, int, int] = (110, 200, 255, 200)
@@ -47,7 +47,7 @@ class Config:
     fit_max_size: int = 42
 
     # Output GIF
-    out_path: str = "assets/hi_terminal_prompt.gif"
+    out_path: str = "assets/terminal.gif"
     loop: int = 0
     disposal: int = 2
     optimize: bool = False  # keep a single global palette across frames
