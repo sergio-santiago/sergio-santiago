@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import base64
 import pathlib
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -52,6 +53,18 @@ MIN_PAGE_CONTRAST = 2.0
 MIN_LABEL_CONTRAST = 3.0  # a warning, not a failure: see check_colors()
 
 
+def slugify(label: str) -> str:
+    """
+    A label as a filename, and therefore as part of a URL in the README.
+
+    Dots go before anything else so that Node.js stays nodejs. Everything else
+    that is not a letter or a digit becomes a hyphen, which is what keeps 9+ and
+    100% out of a path: a literal % in a URL starts an escape sequence and the
+    link breaks.
+    """
+    return re.sub(r"[^a-z0-9]+", "-", label.lower().replace(".", "")).strip("-")
+
+
 @dataclass(frozen=True)
 class Badge:
     """One badge. `icon` is a simple-icons slug unless `local` says otherwise."""
@@ -63,32 +76,48 @@ class Badge:
 
     @property
     def slug(self) -> str:
-        return self.label.lower().replace(" ", "-").replace(".", "")
+        return slugify(self.label)
 
 
 # Concept badges. No brand, no official colour, so both are chosen here: an icon
 # that carries the idea and a colour that clears both floors below.
 def concept(label: str, color: str) -> Badge:
-    slug = label.lower().replace(" ", "-")
-    return Badge(label, color, icon="", local=f"concept/{slug}.svg")
+    return Badge(label, color, icon="", local=f"concept/{slugify(label)}.svg")
+
+
+# The three facts above the table share one muted slate, because they are one
+# kind of thing and the colour is what says so. The twelve concept badges are
+# individually coloured, so a single tone reads as a different category at a
+# glance. It is also deliberately quieter than anything in the table: this is
+# metadata about working together, not a claim about skill.
+FACT = "506080"
 
 
 GROUPS: dict[str, list[Badge]] = {
-    # The thesis line, above the table. Four problems, no vendor.
-    "domain": [
+    # The line above the table. It used to hold four domain badges, which said
+    # what the headline directly above them already said, word for word. These
+    # three are the only facts on the page a reader cannot get from the prose,
+    # and they are the page's only numbers.
+    "facts": [
+        Badge("9+ Years", FACT, "", local="concept/9-years.svg"),
+        Badge("100% Remote", FACT, "", local="concept/100-remote.svg"),
+        Badge("CET", FACT, "", local="concept/cet.svg"),
+    ],
+    # The problem first and the answer second, which is the order the profile
+    # argues in: the shape of the problem is the identity, the pattern is how it
+    # was met. Concurrency sits with the problems because that is what it is.
+    "domain-architecture": [
         concept("Distributed Systems", "0E7490"),
         concept("High Traffic", "B45309"),
         concept("Scalability", "0F766E"),
         concept("Payments", "1F6FEB"),
-    ],
-    "architecture": [
+        concept("Concurrency", "8B3A62"),
         concept("Hexagonal Architecture", "2F6F5E"),
         concept("DDD", "3A5F8A"),
         concept("CQRS", "57518C"),
         concept("Clean Architecture", "6B4A7E"),
         concept("Event-Driven", "9E6A03"),
         concept("Microservices", "2E6B7A"),
-        concept("Concurrency", "8B3A62"),
         concept("TDD", "4E7040"),
     ],
     "languages": [

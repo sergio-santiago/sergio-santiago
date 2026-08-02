@@ -24,8 +24,15 @@ as broken images until they became files.
 
 ## `build_badges.py`
 
-Declares all 43 badges in one table and asks shields.io to render each one, writing
-the result under `assets/badges/<group>/`, one folder per column of the README table.
+Declares all 46 badges in one table and asks shields.io to render each one, writing
+the result under `assets/badges/<group>/`. One folder per column of the README table,
+plus `facts/` for the three that sit above it.
+
+Those three carry the only numbers on the page, and they exist because the four
+badges that used to sit there repeated the headline directly above them word for
+word. A label becomes a filename and therefore part of a URL, which is why
+`slugify` reduces `100% Remote` to `100-remote`: a literal `%` in a path starts an
+escape sequence and the image stops loading.
 
 Logos come from three places:
 
@@ -33,7 +40,7 @@ Logos come from three places:
 | --- | --- | --- |
 | simple-icons | most brands | shields.io resolves the slug itself |
 | `assets/icons/brand/` | AWS, LinkedIn, Protocol Buffers | inlined as a data URI |
-| `assets/icons/concept/` | the twelve concept badges | inlined as a data URI |
+| `assets/icons/concept/` | the twelve concept badges and the three facts | inlined as a data URI |
 
 shields.io refuses to serve the AWS and LinkedIn marks, and Protocol Buffers is not
 in simple-icons under any name, so those three carry their official SVG here. The
