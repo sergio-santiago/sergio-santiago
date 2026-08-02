@@ -40,10 +40,19 @@ in simple-icons under any name, so those three carry their official SVG here. Th
 concept badges have no brand to borrow from, so they use [Phosphor Icons][phosphor]
 (MIT) in the fill weight, recoloured to white.
 
-Colours are checked as the badges are built. Anything under a 2.0 contrast ratio
-against GitHub's dark background (`#0d1117`) fails the run. Two badges sit just above
-that floor on purpose: Symfony and Apache Kafka are black marks, and `#4A4A4A` keeps
-them legible instead of letting them dissolve into the page.
+Colours are checked as the badges are built, against **both** themes, because a
+palette tuned to one of them says nothing about the other. Anything under a 2.0
+contrast ratio against GitHub's dark background (`#0d1117`) or its light one
+fails the run. Two badges sit just above that floor on the dark side on purpose:
+Symfony and Apache Kafka are black marks, and `#4A4A4A` keeps them legible
+instead of letting them dissolve into the page. On the light side the closest is
+Java's `#ED8B00` at 2.53, which is comfortable but not so comfortable that a
+paler brand colour could not walk in and dissolve there instead.
+
+Only one number is needed for the light theme, because contrast is symmetric:
+how a badge reads against a white page and how shields.io's white label reads on
+top of the badge are the same ratio. The first is fatal below 2.0 and the second
+warns below 3.0, which is why three brand colours warn today and none fail.
 
 ## `render_terminal.py`
 

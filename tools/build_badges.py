@@ -36,13 +36,18 @@ BADGES = ROOT / "assets/badges"
 SHIELDS = "https://img.shields.io/badge"
 TIMEOUT = 30
 
-# Every colour below is measured twice, because a badge can fail in two ways.
+# A badge colour has to survive three readings, and only two numbers are needed
+# for them, because contrast is symmetric.
 #
-# Too dark and the badge dissolves into GitHub's dark page: that is how five of
-# them shipped invisible. Too bright and shields.io's white label stops being
-# readable on top of it, which is not a dark-mode problem at all since the badge
-# carries its own background.
+# Against the dark page: too dark and the badge dissolves into it, which is how
+# five of them once shipped invisible.
+#
+# Against white, which is read twice over. It is how legible shields.io's white
+# label is on top of the badge, and it is also how the badge sits on GitHub's
+# light theme, where the page behind it is the same white. The first reading is
+# a warning and the second is fatal, so the floor is the lower of the two.
 DARK_BG = (0x0D, 0x11, 0x17)
+LIGHT_BG = (0xFF, 0xFF, 0xFF)
 MIN_PAGE_CONTRAST = 2.0
 MIN_LABEL_CONTRAST = 3.0  # a warning, not a failure: see check_colors()
 
@@ -154,21 +159,29 @@ def contrast(hex_color: str, against: tuple[int, int, int] = DARK_BG) -> float:
 
 def check_colors() -> list[str]:
     """
-    Fail on a badge the page swallows. Only warn on a label that is hard to read.
+    Fail on a badge either page would swallow. Only warn on a hard-to-read label.
 
-    The second check is a warning because most of the badges that trip it are
-    official brand colours, and shipping Go in something other than Go's cyan to
-    win half a contrast point would be the wrong trade.
+    Both themes are checked, because a reader's choice of theme is not ours to
+    assume and a palette tuned against one of them says nothing about the other.
+    Nothing fails against white today, and that is a measurement rather than a
+    property: the closest is Java's #ED8B00 at 2.53, so a paler brand colour
+    could still walk in and dissolve on the light theme without this.
+
+    The label check stays a warning. Most of what trips it are official brand
+    colours, and shipping Go in something other than Go's cyan to win half a
+    contrast point would be the wrong trade.
     """
     fatal, warn = [], []
     for badges in GROUPS.values():
         for badge in badges:
-            page = contrast(badge.color)
-            label = contrast(badge.color, (0xFF, 0xFF, 0xFF))
-            if page < MIN_PAGE_CONTRAST:
-                fatal.append(f"{badge.label} at #{badge.color} is {page:.2f} against the page")
-            if label < MIN_LABEL_CONTRAST:
-                warn.append(f"{badge.label} at #{badge.color} is {label:.2f} under white text")
+            dark = contrast(badge.color, DARK_BG)
+            light = contrast(badge.color, LIGHT_BG)
+            if dark < MIN_PAGE_CONTRAST:
+                fatal.append(f"{badge.label} at #{badge.color} is {dark:.2f} on the dark page")
+            if light < MIN_PAGE_CONTRAST:
+                fatal.append(f"{badge.label} at #{badge.color} is {light:.2f} on the light page")
+            if light < MIN_LABEL_CONTRAST:
+                warn.append(f"{badge.label} at #{badge.color} is {light:.2f} under white text")
     for line in warn:
         print(f"  warning: {line}")
     return fatal
