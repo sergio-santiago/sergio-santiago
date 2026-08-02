@@ -165,9 +165,15 @@ def compute_metrics(font: ImageFont.FreeTypeFont, cfg: Config) -> tuple[int, int
     # Cast to int to keep coordinates integral for PIL drawing operations.
     w_prompt = int(d.textlength(cfg.prompt, font=font))
 
-    hg = font.getbbox("Hg")  # use a typical ascent/descender pair
-    text_h = hg[3] - hg[1]
-    baseline_y = int((h - text_h) // 2)
+    # Centre the ink, not the line box. getbbox returns offsets measured from the
+    # ascender line, which is also what d.text() takes as its origin, so the two
+    # have to be combined rather than subtracted from each other: doing the
+    # latter left the text nine pixels below the panel's centre, and next to the
+    # traffic lights, which really are centred, it read as the dots being off.
+    #
+    # Measured on the full string so the baseline holds steady while it types.
+    top, bottom = font.getbbox(cfg.prompt + cfg.text)[1::2]
+    baseline_y = int((h - (top + bottom)) // 2)
 
     return w_prompt, baseline_y
 
