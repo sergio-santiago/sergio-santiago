@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import List, Optional, Tuple
 from PIL import Image, ImageDraw, ImageFont
 import random
@@ -36,6 +36,18 @@ class Config:
     cursor_char: str = "▋"
     cursor_blink_frames: int = 10
 
+    # Rendering scale. Everything above is in CSS pixels, the size the header is
+    # shown at. The file is rendered this many times larger and displayed with an
+    # explicit width, because at 1x on a Retina screen the panel gets one device
+    # pixel per image pixel while the text beside it gets four, and it shows.
+    scale: int = 2
+
+    # Typing rhythm, in characters per frame. Erasing is faster than typing for
+    # the same reason it is in a real terminal, and it also halves the frames:
+    # the backspacing was 46 of the 109 frames and the least interesting of them.
+    type_step: int = 1
+    erase_step: int = 4
+
     # Timing
     fps: int = 30
     pause_final_seconds: float = 3.5
@@ -62,6 +74,22 @@ class Config:
 
     # Determinism
     seed: int = 137
+
+    def scaled(self) -> "Config":
+        """Return this config with every pixel measurement multiplied by scale."""
+        s = self.scale
+        if s == 1:
+            return self
+        return replace(
+            self,
+            size=(self.size[0] * s, self.size[1] * s),
+            padding_x=self.padding_x * s,
+            radius=self.radius * s,
+            fit_min_size=self.fit_min_size * s,
+            fit_max_size=self.fit_max_size * s,
+            glitch_intensity=self.glitch_intensity * s,
+            scale=1,
+        )
 
 
 def _frame_duration_ms(cfg: Config) -> int:
@@ -211,29 +239,36 @@ def draw_text_frame(
     return img
 
 
-def build_sequence(text: str, pause_full_frames: int, pause_empty_frames: int) -> List[int]:
+def build_sequence(
+    text: str, pause_full_frames: int, pause_empty_frames: int,
+    type_step: int = 1, erase_step: int = 1,
+) -> List[int]:
     """
     Build the per-frame text-length sequence:
-      - forward range: 0 to len(text) inclusive
+      - forward range: 0 to len(text), type_step characters at a time
       - hold full text (pause_full_frames)
-      - delete backward to 0
+      - delete backward to 0, erase_step characters at a time
       - hold empty (pause_empty_frames)
     """
     l = len(text)
-    forward = list(range(l + 1))
+    forward = list(range(0, l + 1, type_step))
+    if forward[-1] != l:
+        forward.append(l)
     pause_full = [l] * pause_full_frames
-    backward = list(range(l - 1, -1, -1))
+    backward = list(range(l - 1, -1, -erase_step))
     pause_empty = [0] * pause_empty_frames
     return forward + pause_full + backward + pause_empty
 
 
 def render(cfg: Config) -> str:
     """
-    Render the animated GIF using a single global palette to avoid color drift.
+    Render the animated header and write it to cfg.out_path.
 
     Returns:
-        Output path of the generated GIF.
+        Output path of the generated file.
     """
+    cfg = cfg.scaled()
+
     # Timing
     frame_ms = _frame_duration_ms(cfg)
     pause_full_frames = int(cfg.fps * cfg.pause_final_seconds)
@@ -247,9 +282,12 @@ def render(cfg: Config) -> str:
     # Build frame sequence (render RGBA frames first)
     random.seed(cfg.seed)
     frames_rgba: List[Image.Image] = []
-    sequence = build_sequence(cfg.text, pause_full_frames, cfg.pause_empty_frames)
+    sequence = build_sequence(
+        cfg.text, pause_full_frames, cfg.pause_empty_frames,
+        cfg.type_step, cfg.erase_step,
+    )
 
-    typing_end = len(cfg.text) + 1
+    typing_end = len(range(0, len(cfg.text) + 1, cfg.type_step))
     pause_end = typing_end + pause_full_frames
 
     for i, text_len in enumerate(sequence):

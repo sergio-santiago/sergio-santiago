@@ -63,11 +63,22 @@ colour the reader's theme is using. The panel is drawn at four times the final s
 and reduced, because PIL's `rounded_rectangle` left the curve with three alpha steps
 and it read as a staircase. It has seventy two now.
 
+The file is rendered at twice the size it is displayed at, and the README asks for
+it with an explicit `width`. On a Retina screen a 1x image gets one device pixel per
+image pixel while the text beside it gets four, and the panel looked soft next to
+everything else. `Config.scale` handles it: every measurement above it is in CSS
+pixels and gets multiplied on the way in.
+
 Lossless because it is also the smaller file, which sounds backwards until you look
 at what is being encoded. Flat text on a flat panel is what lossless handles best,
 and lossy compression answers with noise, which is exactly what destroys the
 frame-to-frame compression. Measured on this header: lossless 381 KB, lossy at
 quality 92 459 KB, GIF 398 KB.
+
+Doubling the resolution would have doubled the file too, so the erase runs four
+characters per frame instead of one. Backspacing was 46 of the 109 frames and the
+least interesting of them, and erasing fast is what a real terminal looks like
+anyway. The header ends up at 453 KB for twice the pixels.
 
 Output is deterministic: the glitch uses a fixed seed, so an unchanged config
 produces an unchanged file.
