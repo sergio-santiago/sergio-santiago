@@ -1,4 +1,4 @@
-<img src="./assets/terminal.gif" alt="Animated terminal prompt typing 'I work on the hard problems of money at scale'">
+<img src="./assets/terminal.webp" alt="Animated terminal prompt typing 'I work on the hard problems of money at scale'">
 
 ### Senior Backend Engineer from Spain 🇪🇸
 #### Distributed Systems & High Traffic · Payments · Architecture (Hexagonal · DDD · CQRS)

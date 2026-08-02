@@ -45,15 +45,32 @@ against GitHub's dark background (`#0d1117`) fails the run. Two badges sit just 
 that floor on purpose: Symfony and Apache Kafka are black marks, and `#4A4A4A` keeps
 them legible instead of letting them dissolve into the page.
 
-## `render_terminal_gif.py`
+## `render_terminal.py`
 
 Renders the animated header. The typed message, the canvas, the glitch offsets and
 the timing all live in one frozen `Config` at the top of the file. The font size is
 binary-searched to fit the message, so changing the text is a one-line edit followed
-by `make gif`.
+by `make header`.
 
-Output is deterministic: the glitch uses a fixed seed and every frame shares one
-global palette, so an unchanged config produces an unchanged GIF.
+The output is a lossless animated WebP, not a GIF, and both halves of that are
+deliberate.
+
+WebP because the panel has rounded corners. GIF transparency is one bit per pixel,
+so the area outside the curve can only be fully drawn or fully absent, and saving as
+GIF meant dropping the alpha channel entirely: every corner came out as a black
+square sitting on the page. WebP carries real alpha, so the corners take whatever
+colour the reader's theme is using. The panel is drawn at four times the final size
+and reduced, because PIL's `rounded_rectangle` left the curve with three alpha steps
+and it read as a staircase. It has seventy two now.
+
+Lossless because it is also the smaller file, which sounds backwards until you look
+at what is being encoded. Flat text on a flat panel is what lossless handles best,
+and lossy compression answers with noise, which is exactly what destroys the
+frame-to-frame compression. Measured on this header: lossless 381 KB, lossy at
+quality 92 459 KB, GIF 398 KB.
+
+Output is deterministic: the glitch uses a fixed seed, so an unchanged config
+produces an unchanged file.
 
 ## Adding a badge
 

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install badges gif assets clean
+.PHONY: help install badges header assets clean
 
 # Virtual environment directory
 VENV := .venv
@@ -23,10 +23,10 @@ $(PYTHON):
 badges: $(PYTHON) ## Rebuild every badge under assets/badges/
 	$(PYTHON) tools/build_badges.py
 
-gif: $(PYTHON) ## Rebuild the animated terminal header
-	$(PYTHON) tools/render_terminal_gif.py
+header: $(PYTHON) ## Rebuild the animated terminal header
+	$(PYTHON) tools/render_terminal.py
 
-assets: badges gif ## Rebuild everything the README points at
+assets: badges header ## Rebuild everything the README points at
 
 clean: ## Remove the virtualenv and Python caches
 	rm -rf $(VENV)

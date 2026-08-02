@@ -11,7 +11,7 @@ import sys
 @dataclass(frozen=True)
 class Config:
     """
-    Centralized configuration for the banner GIF renderer.
+    Centralized configuration for the animated header renderer.
 
     All values are deterministic by default to ensure reproducible output.
     """
@@ -46,13 +46,19 @@ class Config:
     fit_min_size: int = 14
     fit_max_size: int = 42
 
-    # Output GIF
-    out_path: str = "assets/terminal.gif"
+    # Output. WebP rather than GIF, for one reason that matters: the panel has
+    # rounded corners, and GIF's transparency is one bit, so the pixels outside
+    # the curve can only be fully on or fully off. Saving as GIF meant dropping
+    # the alpha channel, which left a black square behind every corner. WebP
+    # carries real alpha, so the corners sit on whatever colour the page uses.
+    #
+    # Lossless is also the smaller file here, which looks backwards until you
+    # remember this is flat text on a flat panel: lossy adds noise, and noise is
+    # exactly what kills the frame-to-frame compression.
+    out_path: str = "assets/terminal.webp"
     loop: int = 0
-    disposal: int = 2
-    optimize: bool = False  # keep a single global palette across frames
+    supersample: int = 4  # the panel is drawn this much larger, then reduced
     duration_ms: Optional[int] = None  # if None -> 1000 / fps
-    master_palette_colors: int = 256  # global palette size (GIF max is 256)
 
     # Determinism
     seed: int = 137
@@ -128,26 +134,31 @@ def draw_box(cfg: Config) -> Image.Image:
     """
     Draw the rounded background panel with a subtle inner highlight.
 
+    Drawn at cfg.supersample times the final size and then reduced, because
+    PIL's rounded_rectangle barely antialiases: straight from the draw call the
+    corner had a single intermediate alpha step, which reads as a staircase.
+
     Returns an RGBA image used as the base layer for each frame.
     """
     w, h = cfg.size
-    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    s = max(1, cfg.supersample)
+    img = Image.new("RGBA", (w * s, h * s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
 
     d.rounded_rectangle(
-        [0, 0, w - 1, h - 1],
-        radius=cfg.radius,
+        [0, 0, w * s - 1, h * s - 1],
+        radius=cfg.radius * s,
         fill=cfg.bg,
         outline=cfg.border,
-        width=2,
+        width=2 * s,
     )
     d.rounded_rectangle(
-        [2, 2, w - 3, h - 3],
-        radius=cfg.radius - 2,
+        [2 * s, 2 * s, w * s - 3 * s, h * s - 3 * s],
+        radius=(cfg.radius - 2) * s,
         outline=(255, 255, 255, 28),
-        width=1,
+        width=1 * s,
     )
-    return img
+    return img.resize((w, h), Image.LANCZOS) if s > 1 else img
 
 
 def draw_text_frame(
@@ -259,25 +270,19 @@ def render(cfg: Config) -> str:
         )
         frames_rgba.append(fr_rgba)
 
-    # Build a global master palette from a representative frame to keep colors stable
-    master_full = draw_text_frame(panel, cfg.text, True, 2, -2, font, prompt_w, baseline_y, cfg)
-    master_p = master_full.convert("P", palette=Image.Palette.ADAPTIVE, colors=cfg.master_palette_colors)
-
-    # Quantize all frames against the same palette (no dither to avoid noise artifacts)
-    frames_p = [
-        fr.convert("RGB").quantize(palette=master_p, dither=Image.Dither.NONE)
-        for fr in frames_rgba
-    ]
-
-    # Save the GIF with a single global palette (optimize=False is key here)
-    frames_p[0].save(
+    # Straight to WebP, keeping every frame in RGBA. There is no quantisation
+    # step and no master palette any more: both existed to survive GIF's 256
+    # colours, and both are what forced the alpha channel to be thrown away.
+    frames_rgba[0].save(
         cfg.out_path,
+        format="WEBP",
         save_all=True,
-        append_images=frames_p[1:],
+        append_images=frames_rgba[1:],
         loop=cfg.loop,
         duration=frame_ms,
-        optimize=cfg.optimize,
-        disposal=cfg.disposal,
+        lossless=True,
+        method=6,
+        exact=True,  # do not touch RGB under transparent pixels
     )
     return cfg.out_path
 
@@ -285,4 +290,4 @@ def render(cfg: Config) -> str:
 if __name__ == "__main__":
     config = Config()
     path = render(config)
-    print("GIF saved at", path)
+    print("Header saved at", path)
