@@ -23,7 +23,7 @@ class Config:
     border: Tuple[int, int, int] = (70, 74, 82)
 
     # Text content & colors
-    prompt: str = "sergio  "  # a real shell prompt names its user
+    prompt: str = "sergio-santiago  "  # a real shell prompt names its user
     text: str = "deterministic beats clever   "
     color_main: Tuple[int, int, int, int] = (60, 255, 120, 255)
     color_red: Tuple[int, int, int, int] = (255, 60, 100, 200)

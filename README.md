@@ -1,4 +1,4 @@
-<img src="./assets/terminal.webp" width="900" alt="Animated terminal prompt reading: sergio, deterministic beats clever">
+<img src="./assets/terminal.webp" width="900" alt="Animated terminal prompt reading: sergio-santiago, deterministic beats clever">
 
 ### Senior Backend Engineer from Spain 🇪🇸
 #### Distributed Systems & High Traffic · Payments · Architecture (Hexagonal · DDD · CQRS)
