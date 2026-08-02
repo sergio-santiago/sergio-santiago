@@ -62,7 +62,7 @@ class Badge:
 
 
 # Concept badges. No brand, no official colour, so both are chosen here: an icon
-# that carries the idea and a colour that clears MIN_CONTRAST against DARK_BG.
+# that carries the idea and a colour that clears both floors below.
 def concept(label: str, color: str) -> Badge:
     slug = label.lower().replace(" ", "-")
     return Badge(label, color, icon="", local=f"concept/{slug}.svg")
@@ -71,10 +71,10 @@ def concept(label: str, color: str) -> Badge:
 GROUPS: dict[str, list[Badge]] = {
     # The thesis line, above the table. Four problems, no vendor.
     "domain": [
-        concept("Payments", "1F6FEB"),
         concept("Distributed Systems", "0E7490"),
         concept("High Traffic", "B45309"),
         concept("Scalability", "0F766E"),
+        concept("Payments", "1F6FEB"),
     ],
     "architecture": [
         concept("Hexagonal Architecture", "2F6F5E"),
@@ -99,8 +99,8 @@ GROUPS: dict[str, list[Badge]] = {
     "frameworks": [
         Badge("Spring Boot", "6DB33F", "springboot"),
         Badge("Laravel", "FF2D20", "laravel"),
-        # Symfony's mark is black. 4A4A4A is a deliberate compromise: it keeps
-        # the shape readable at 1.9 contrast instead of vanishing at 1.0.
+        # Symfony's mark is black, which sits at 1.11 against the page. #4A4A4A
+        # is a deliberate compromise: 2.14, just over the floor, still reads grey.
         Badge("Symfony", "4A4A4A", "symfony"),
         Badge("NestJS", "E0234E", "nestjs"),
         Badge("FastAPI", "009688", "fastapi"),
@@ -113,7 +113,7 @@ GROUPS: dict[str, list[Badge]] = {
         Badge("Redis", "FF4438", "redis"),
         Badge("MongoDB", "47A248", "mongodb"),
         Badge("Elasticsearch", "005571", "elasticsearch"),
-        Badge("Apache Kafka", "4A4A4A", "apachekafka"),  # black mark, same call as Symfony
+        Badge("Apache Kafka", "4A4A4A", "apachekafka"),  # #231F20 is 1.16, same call as Symfony
         # Protocol Buffers is not in simple-icons under any name.
         Badge("Protobuf", "4285F4", "", local="brand/protobuf.svg"),
     ],

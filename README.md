@@ -3,7 +3,7 @@
 ### Senior Backend Engineer from Spain 🇪🇸
 #### Distributed Systems & High Traffic · Payments · Architecture (Hexagonal · DDD · CQRS)
 
-![Payments](./assets/badges/domain/payments.svg) ![Distributed Systems](./assets/badges/domain/distributed-systems.svg) ![High Traffic](./assets/badges/domain/high-traffic.svg) ![Scalability](./assets/badges/domain/scalability.svg)
+![Distributed Systems](./assets/badges/domain/distributed-systems.svg) ![High Traffic](./assets/badges/domain/high-traffic.svg) ![Scalability](./assets/badges/domain/scalability.svg) ![Payments](./assets/badges/domain/payments.svg)
 
 ---
 
