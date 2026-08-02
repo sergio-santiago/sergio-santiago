@@ -24,7 +24,9 @@ class Config:
 
     # Text content & colors
     prompt: str = "sergio-santiago  "  # a real shell prompt names its user
-    text: str = "solve --deterministic | test | ship"
+    # && rather than |: a pipe only wires stdout to stdin, so it would ship
+    # whether or not the tests passed. This line is true if you run it.
+    text: str = "solve --deterministic && test && ship"
     color_main: Tuple[int, int, int, int] = (60, 255, 120, 255)
     color_red: Tuple[int, int, int, int] = (255, 60, 100, 200)
     color_blue: Tuple[int, int, int, int] = (110, 200, 255, 200)

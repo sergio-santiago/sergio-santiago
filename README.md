@@ -1,4 +1,4 @@
-<img src="./assets/terminal.webp" width="900" alt="Animated terminal prompt reading: sergio-santiago, solve --deterministic | test | ship">
+<img src="./assets/terminal.webp" width="900" alt="Animated terminal prompt reading: sergio-santiago, solve --deterministic &amp;&amp; test &amp;&amp; ship">
 
 ### Senior Backend Engineer from Spain 🇪🇸
 #### Distributed Systems & High Traffic · Payments · Architecture (Hexagonal · DDD · CQRS)
