@@ -1,11 +1,34 @@
+"""
+Render the animated header at the top of the profile README.
+
+A terminal types one shell line, holds it while a reflection crosses the glass,
+erases it and starts again. Every measurement, colour and timing lives in the
+frozen Config at the top of this file, so the image in the repository is exactly
+what this script produces: delete assets/terminal.webp, run it, and the bytes
+come back identical.
+
+The output is a lossless animated WebP rather than a GIF. GIF transparency is one
+bit per pixel, so the panel's rounded corners could only be fully drawn or fully
+absent, and saving one meant dropping the alpha channel and leaving a black
+square behind every corner.
+
+What it costs is worth knowing before changing it. Everything static is close to
+free, and the reflection is the only thing besides the text that moves: each
+distinct position of it costs around ten kilobytes, whatever distance it
+travelled to get there. tools/README.md has the measurements.
+
+Usage:
+    make header          # or: python tools/render_terminal.py
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from typing import List, Optional, Tuple
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 import math
-import random
 import os
+import random
 import sys
 
 

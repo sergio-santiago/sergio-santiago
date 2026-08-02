@@ -26,7 +26,7 @@ as broken images until they became files.
 
 Declares all 46 badges in one table and asks shields.io to render each one, writing
 the result under `assets/badges/<group>/`. One folder per column of the README table,
-plus `facts/` for the three that sit above it.
+plus `facts/` for the three that sit above it and `social/` for the two below.
 
 Those three carry the only numbers on the page, and they exist because the four
 badges that used to sit there repeated the headline directly above them word for
