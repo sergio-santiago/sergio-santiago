@@ -206,14 +206,16 @@ def draw_box(cfg: Config) -> Image.Image:
         outline=(255, 255, 255, 28),
         width=1 * s,
     )
-    img = img.resize((w, h), Image.LANCZOS) if s > 1 else img
-
-    d = ImageDraw.Draw(img)
-    r, cy = cfg.dot_radius, h // 2
+    # Drawn before the reduction, like everything else here. PIL's ellipse is no
+    # better antialiased than its rounded_rectangle, and three small circles are
+    # where that shows most.
+    r, cy = cfg.dot_radius * s, (h * s) // 2
+    step = (2 * cfg.dot_radius + cfg.dot_gap) * s
     for i, colour in enumerate(cfg.dots):
-        cx = cfg.padding_x + r + i * (2 * r + cfg.dot_gap)
+        cx = cfg.padding_x * s + r + i * step
         d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=colour + (255,))
-    return img
+
+    return img.resize((w, h), Image.LANCZOS) if s > 1 else img
 
 
 def draw_text_frame(
