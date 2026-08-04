@@ -13,7 +13,7 @@
 | 📦 [**bulk-import-aws**](https://github.com/sergio-santiago/bulk-import-aws) | Async bulk ingestion on AWS, idempotent by file hash. Go, Lambda, SQS and DynamoDB, with the whole stack in Terraform |
 | 🏁 [**daily-race**](https://github.com/sergio-santiago/daily-race) | Standups turned into an F1 race. A Discord bot over NestJS and PostgreSQL, shipped from a hackathon |
 | 🤖 [**whatsapp-ai-chatbot**](https://github.com/sergio-santiago/whatsapp-ai-chatbot) | The WhatsApp Business API bridged to a language model: the webhook handshake and the plumbing, in Node.js |
-| 🎛️ [**launchpad-shortcut-deck**](https://github.com/sergio-santiago/launchpad-shortcut-deck) | Hardware and OS kept in sync: MIDI in, real-time LED state out, over a Hammerspoon bridge |
+| 🎛️ [**launchpad&#8209;shortcut&#8209;deck**](https://github.com/sergio-santiago/launchpad-shortcut-deck) | Hardware and OS kept in sync: MIDI in, real-time LED state out, over a Hammerspoon bridge |
 | 🐚 [**.dotfiles**](https://github.com/sergio-santiago/.dotfiles) | How I keep my own machine reproducible: a test suite, drift checks and a doctor of its own |
 | ⚙️ [**gh-actions-lab**](https://github.com/sergio-santiago/gh-actions-lab) | One small app wired to a complete CI/CD pipeline, where every push to main ends in a versioned release |
 
