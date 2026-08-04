@@ -104,28 +104,6 @@ characters per frame instead of one. Backspacing was 46 of the 109 frames and th
 least interesting of them, and erasing fast is what a real terminal looks like
 anyway.
 
-The message is a shell line and it is meant to be a true one, which took three
-goes to get right.
-
-`&&` rather than `|`, because a pipe only wires stdout to stdin: the pipeline
-version ships whether or not what came before succeeded. `&&` rather than `>`
-for a worse version of the same thing, since a redirect does not run the next
-word at all. It creates a file named after it and helps itself to the preceding
-command's flags on the way, so `understand > solve --deterministic` writes a
-file called `solve` and hands `--deterministic` to `understand`.
-
-And no bare `test`, which is what this line said for months. `test` is a shell
-builtin and returns false when given no arguments, so the chain stopped there
-and never reached `ship`: the one line on the page written to be literally true
-was the one that was not. It says `understand && solve --deterministic && ship`
-now, and none of those three is a builtin.
-
-Leaving the word out is also a choice about what three words are worth. Being
-tested is the minimum anyone expects and says nothing; being deterministic is a
-claim about how the work is done. The testing is argued elsewhere on the page,
-with a badge and with repositories that have tests, which is worth more than an
-adjective here.
-
 The panel is glass: a border all the way round, a rim light over it that is
 bright on top and a tenth of that at the bottom, a wash of light fading down
 from the top edge, and a soft diagonal reflection resting clear of the traffic

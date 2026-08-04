@@ -1,6 +1,6 @@
 # Senior Backend Engineer from Spain 🇪🇸
 
-<img src="./assets/terminal.webp" width="900" alt="Animated terminal prompt reading: sergio-santiago, understand &amp;&amp; solve --deterministic &amp;&amp; ship">
+<img src="./assets/terminal.webp" width="900" alt="Animated terminal prompt reading: sergio-santiago, understand &amp;&amp; solve --deterministic | ship">
 
 **Distributed Systems & High Traffic · Payments · Architecture (Hexagonal · DDD · CQRS)**
 

@@ -52,22 +52,7 @@ class Config:
 
     # Text content & colors
     prompt: str = "sergio-santiago  "  # a real shell prompt names its user
-    # The line is meant to be true if you run it, and three attempts at it were
-    # not.
-    #
-    # && rather than |, because a pipe only wires stdout to stdin and would ship
-    # whether or not what came before succeeded. && rather than > for a worse
-    # version of the same reason: a redirect does not run the next word at all,
-    # it creates a file named after it, and it quietly steals the preceding
-    # command's flags on the way.
-    #
-    # And no bare `test`, which is what this line used to say. test is a shell
-    # builtin and with no arguments it returns false, so the chain stopped there
-    # and never reached ship. The claim is carried by the TDD badge and by the
-    # repositories that actually have tests.
-    #
-    # None of understand, solve or ship is a builtin, so nothing short-circuits.
-    text: str = "understand && solve --deterministic && ship"
+    text: str = "understand && solve --deterministic | ship"
     color_main: Tuple[int, int, int, int] = (60, 255, 120, 255)
     color_red: Tuple[int, int, int, int] = (255, 60, 100, 200)
     color_blue: Tuple[int, int, int, int] = (110, 200, 255, 200)
@@ -89,15 +74,24 @@ class Config:
     rim_light: int = 110             # alpha of the lit top edge
     sheen: int = 20                  # alpha of the diagonal highlight
     sheen_x: int = 430               # where it rests, clear of the traffic lights
-    sheen_width: int = 130
-    sheen_blur: int = 20
+    # A narrow band, because the width is paid for twice: once in the still
+    # panel and once in every frame of the drift, where it is the region the
+    # encoder has to redraw. Going from 130 to 70 freed 122 KB at 60 positions
+    # and the two are indistinguishable at the size the header is shown.
+    sheen_width: int = 70
+    sheen_blur: int = 12
 
     # The reflection can drift the whole way round the glass and settle back
     # where it started, once per loop, while the line rests. It is the only
     # thing besides the text that moves, and moving is what costs bytes here,
     # so it is bounded on purpose. See _sheen_drift().
-    sheen_steps: int = 30            # distinct positions along the drift, 0 parks it
-    sheen_hold: int = 3              # frames each position is held for
+    #
+    # 60 positions held for 2 frames, rather than 30 held for 3. What reads as
+    # lag is the size of each jump, not the frame rate: the round trip is 2210
+    # pixels, so 30 positions move the band 74 pixels at a time and 60 move it
+    # 35. The band is on screen for the same three seconds either way.
+    sheen_steps: int = 60            # distinct positions along the drift, 0 parks it
+    sheen_hold: int = 2              # frames each position is held for
     sheen_delay: int = 12            # frames of stillness before it sets off
     sheen_span: int = 0              # how far it drifts and back, 0 goes all the way round
 
