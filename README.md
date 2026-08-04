@@ -14,7 +14,7 @@
 | 🏁&nbsp;[**daily&#8209;race**](https://github.com/sergio-santiago/daily-race) | Standups turned into an F1 race. A Discord bot over NestJS and PostgreSQL, shipped from a hackathon |
 | 🐚&nbsp;[**.dotfiles**](https://github.com/sergio-santiago/.dotfiles) | How I keep my own machine reproducible: a test suite, drift checks and a doctor of its own |
 | 🎛️&nbsp;[**launchpad&#8209;shortcut&#8209;deck**](https://github.com/sergio-santiago/launchpad-shortcut-deck) | Hardware and OS kept in sync: MIDI in, real-time LED state out, over a Hammerspoon bridge |
-| 🤖&nbsp;[**whatsapp&#8209;ai&#8209;chatbot**](https://github.com/sergio-santiago/whatsapp-ai-chatbot) | The WhatsApp Business API bridged to a language model: the webhook handshake and the plumbing, in Node.js |
+| 🤖&nbsp;[**messaging&#8209;llm&#8209;bridge**](https://github.com/sergio-santiago/messaging-llm-bridge) | Third-party webhooks done properly: HMAC-verified, acknowledged before the retry window, idempotent by delivery id. Hexagonal in TypeScript, with two channels and two model providers |
 | ⚙️&nbsp;[**gh&#8209;actions&#8209;lab**](https://github.com/sergio-santiago/gh-actions-lab) | One small app wired to a complete CI/CD pipeline, where every push to main ends in a versioned release |
 
 ## 🛠️ Tech Stack
