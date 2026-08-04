@@ -86,11 +86,16 @@ class Config:
     # thing besides the text that moves, and moving is what costs bytes here,
     # so it is bounded on purpose. See _sheen_drift().
     #
-    # 60 positions held for 2 frames, rather than 30 held for 3. What reads as
+    # 45 positions held for 2 frames, rather than 30 held for 3. What reads as
     # lag is the size of each jump, not the frame rate: the round trip is 2210
-    # pixels, so 30 positions move the band 74 pixels at a time and 60 move it
-    # 35. The band is on screen for the same three seconds either way.
-    sheen_steps: int = 60            # distinct positions along the drift, 0 parks it
+    # pixels, and the easing peaks at 1.5x the average speed, so 30 positions
+    # move the band 110 pixels at its fastest and 45 move it 70.
+    #
+    # steps * hold has to fit in the rest pause minus sheen_delay, or the drift
+    # is cut off mid-travel and the panel snaps back to its parked position. That
+    # is checked in _sheen_drift(), because getting it wrong is invisible in the
+    # code and obvious on the page.
+    sheen_steps: int = 45            # distinct positions along the drift, 0 parks it
     sheen_hold: int = 2              # frames each position is held for
     sheen_delay: int = 12            # frames of stillness before it sets off
     sheen_span: int = 0              # how far it drifts and back, 0 goes all the way round
@@ -391,6 +396,24 @@ def _sheen_drift(panel: Image.Image, cfg: Config) -> List[Image.Image]:
     """
     if not cfg.sheen or cfg.sheen_steps <= 0:
         return []
+
+    # The drift is only drawn while the line rests, and the frame loop falls back
+    # to the parked panel once it runs out of positions. So a trip that does not
+    # fit in the pause does not slow down, it stops partway and jumps home. That
+    # shipped once, from raising sheen_steps without checking, and nothing in the
+    # code said a word.
+    room = int(cfg.pause_final_seconds * cfg.fps) - cfg.sheen_delay
+    needed = cfg.sheen_steps * cfg.sheen_hold
+    if needed > room:
+        raise ValueError(
+            f"the reflection needs {needed} frames "
+            f"({cfg.sheen_steps} positions x {cfg.sheen_hold}) but the pause "
+            f"only has {room} after sheen_delay. It would stop at position "
+            f"{room // cfg.sheen_hold} and snap back. Raise "
+            f"pause_final_seconds to at least "
+            f"{(needed + cfg.sheen_delay) / cfg.fps:.1f}, or lower sheen_steps "
+            f"to {room // cfg.sheen_hold}."
+        )
 
     if cfg.sheen_span:
         # Out and back. A cosine turns around smoothly at both ends and returns
