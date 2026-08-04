@@ -106,9 +106,9 @@ anyway.
 
 The panel is glass: a border all the way round, a rim light over it that is
 bright on top and a tenth of that at the bottom, a wash of light fading down
-from the top edge, and a soft diagonal reflection resting clear of the traffic
-lights. All of it but the reflection is drawn once and never touched again,
-which is the only reason it can afford to be this involved.
+from the top edge, and a diagonal reflection resting clear of the traffic lights.
+All of it but the reflection is drawn once and never touched again, which is the
+only reason it can afford to be this involved.
 
 Two things about that edge are load-bearing. The border and the rim light are
 separate layers, because the rim alone leaves the bottom at a tenth strength and
@@ -123,25 +123,37 @@ reads as keyboard lighting.
 
 The reflection is the exception, and it is the expensive half of the file. Once
 per loop, while the line rests, it drifts the whole way round the glass and
-settles back where it started. Two bands are drawn a period apart, so whatever
-leaves by one edge is already arriving at the other and the loop closes on
-itself with nothing to hide.
+settles back where it started, opening out to six times its parked width halfway
+round and closing again on the way back. Two bands are drawn a period apart, so
+whatever leaves by one edge is already arriving at the other and the loop closes
+on itself with nothing to hide.
 
-What that costs is worth writing down, because it is not what you would guess.
-Every distinct position of the reflection costs around ten kilobytes, and how far
-it moved to reach that position makes no difference at all: the encoder rewrites
-the whole band either way. So the header is roughly 455 KB plus ten per position,
-and none of the obvious economies move it much. Dropping the highlight's alpha
-from 48 to 18 saved 46 KB. Narrowing the band saved fifteen per cent. Fading it
-out below the halfway line saved more than either, and was thrown out anyway,
-because a reflection cut off at half height stops reading as light crossing glass
-and starts reading as a smudge.
+It is a gradient along its own axis, not a filled shape with soft edges. That
+distinction only starts to matter once the band opens: at 70px almost all of a
+blurred polygon is edge, so it reads as light, but at 450 the middle is a plain
+translucent rectangle sitting over the panel. A bell keeps a bright spine with
+the sides falling away, which survives being hundreds of pixels wide.
 
-Thirty positions, each held for three frames, is what the budget buys: a trip of
-three seconds, and 778 KB. Sixty would be visibly smoother and another 300 KB.
-The same thirty positions spent on a short drift out and back instead of a full
-circuit cost exactly the same and move far more smoothly, which is what
-`Config.sheen_span` is for if that trade ever looks better than this one.
+And it is anchored by its centre. Anchoring by the left edge, which is what the
+first version did, means widening the band walks its axis to the right, so the
+parked reflection ends up hundreds of pixels off where it belongs.
+
+What it costs is worth writing down, because it is not what you would guess.
+Every distinct position costs bytes whether the band moved a hundred pixels or
+ten, so what the budget buys is positions rather than distance. But it is the
+area that changes that is actually paid for, which is why the parked band is
+narrow: it opens only while it is travelling, and only in the middle of the trip.
+
+Width past about 450px buys nothing. Keeping a band that wide from washing the
+panel out means dropping its alpha, and a dim band is a band you cannot see.
+Brightness is what carries the effect: measured over the panel, opening to 900px
+lifted the peak by one part in 255, while raising the alpha at full opening from
+26 to 40 lifted it from 59 to 68.
+
+Sixty positions, one frame each, is what the budget buys: a trip of three
+seconds, and 993 KB. `sheen_steps * sheen_hold` has to fit inside the rest pause
+or the drift is cut off partway and the panel snaps home, which shipped once and
+is now a hard failure in `_sheen_drift`.
 
 Output is deterministic: the glitch uses a fixed seed, so an unchanged config
 produces an unchanged file.

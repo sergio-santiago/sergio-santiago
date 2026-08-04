@@ -72,31 +72,50 @@ class Config:
     top_light: int = 26              # peak alpha of the wash, at the top edge
     top_light_falloff: float = 0.55  # fraction of the height it fades over
     rim_light: int = 110             # alpha of the lit top edge
-    sheen: int = 20                  # alpha of the diagonal highlight
-    sheen_x: int = 430               # where it rests, clear of the traffic lights
-    # A narrow band, because the width is paid for twice: once in the still
-    # panel and once in every frame of the drift, where it is the region the
-    # encoder has to redraw. Going from 130 to 70 freed 122 KB at 60 positions
-    # and the two are indistinguishable at the size the header is shown.
-    sheen_width: int = 70
-    sheen_blur: int = 12
+    sheen_x: int = 430               # where its axis rests, clear of the lights
+    sheen_blur: int = 9
+
+    # The band opens as it crosses and closes again on the way back, so its width
+    # and its brightness both move. Two things had to change for that to read as
+    # light rather than as a translucent slab:
+    #
+    # It is a gradient now, not a flat polygon with soft edges. At 70px almost all
+    # of a blurred polygon is edge, so it worked; at 900 the middle is a plain
+    # rectangle. A bell along the band's own axis keeps a bright spine with the
+    # sides falling away, which survives being hundreds of pixels wide.
+    #
+    # And it is anchored by its centre. Anchoring by the left edge meant widening
+    # it walked its axis to the right, so the parked reflection sat off where it
+    # belonged.
+    #
+    # Widths past ~450 buy nothing: at that point the only way to keep the panel
+    # from washing out is to drop the alpha, and a dim band is a band you cannot
+    # see. Brightness is what carries the effect, not size. Measured over the
+    # panel, going from alpha 26 to 40 at the peak lifts it from 59 to 68 out of
+    # 255, where the extra width alone lifted it by one.
+    sheen_width_min: int = 70        # parked, and at both ends of the trip
+    sheen_width_max: int = 450       # halfway round
+    sheen_alpha_min: int = 22        # alpha when narrow
+    sheen_alpha_max: int = 40        # alpha when open
+    sheen_shape: float = 1.8         # >1 sharpens the bell, so the spine reads
 
     # The reflection can drift the whole way round the glass and settle back
     # where it started, once per loop, while the line rests. It is the only
     # thing besides the text that moves, and moving is what costs bytes here,
     # so it is bounded on purpose. See _sheen_drift().
     #
-    # 45 positions held for 2 frames, rather than 30 held for 3. What reads as
-    # lag is the size of each jump, not the frame rate: the round trip is 2210
-    # pixels, and the easing peaks at 1.5x the average speed, so 30 positions
-    # move the band 110 pixels at its fastest and 45 move it 70.
+    # 60 positions, one frame each. What reads as lag is the size of each jump,
+    # not the frame rate: the round trip is 2250 pixels and this easing peaks at
+    # 1.875x the average speed, so 45 positions would move the band 94 pixels at
+    # its fastest and 60 move it 70. Same three seconds either way, because
+    # 60 x 1 and 45 x 2 * are both 60-odd frames of pause.
     #
     # steps * hold has to fit in the rest pause minus sheen_delay, or the drift
     # is cut off mid-travel and the panel snaps back to its parked position. That
     # is checked in _sheen_drift(), because getting it wrong is invisible in the
     # code and obvious on the page.
-    sheen_steps: int = 45            # distinct positions along the drift, 0 parks it
-    sheen_hold: int = 2              # frames each position is held for
+    sheen_steps: int = 60            # distinct positions along the drift, 0 parks it
+    sheen_hold: int = 1              # frames each position is held for
     sheen_delay: int = 12            # frames of stillness before it sets off
     sheen_span: int = 0              # how far it drifts and back, 0 goes all the way round
 
@@ -169,7 +188,8 @@ class Config:
             dot_gap=self.dot_gap * s,
             left_gutter=self.left_gutter * s,
             sheen_x=self.sheen_x * s,
-            sheen_width=self.sheen_width * s,
+            sheen_width_min=self.sheen_width_min * s,
+            sheen_width_max=self.sheen_width_max * s,
             sheen_blur=self.sheen_blur * s,
             sheen_span=self.sheen_span * s,
             cursor_gap=self.cursor_gap * s,
@@ -319,34 +339,63 @@ def _rim(size: tuple[int, int], bounds: list[int], cfg: Config, s: int) -> Image
     return rim
 
 
-def _streak(panel: Image.Image, x: int, cfg: Config) -> Image.Image:
-    """
-    Lay the soft diagonal band of light over the panel and clip it to the glass.
+def _bell(f: float, shape: float) -> float:
+    """Zero at both ends, one in the middle. shape above 1 sharpens the peak."""
+    return math.sin(math.pi * min(1.0, max(0.0, f))) ** shape
 
-    The band leans by exactly the panel height, so it reads as one plane of light
-    crossing at 45 degrees rather than as a vertical bar.
+
+def _streak(
+    panel: Image.Image, centre: float, alpha: int, width: int, cfg: Config
+) -> Image.Image:
+    """
+    Lay a band of light across the glass, centred on `centre`, and clip it there.
+
+    The band is a gradient along its own axis rather than a filled shape: bright
+    down the spine, falling away to nothing at the sides. Drawn as a one-row
+    gradient, stretched to the panel height and then sheared by exactly that
+    height, so it leans at 45 degrees and reads as one plane of light crossing
+    rather than a vertical bar.
+
+    A flat polygon with blurred edges was enough while the band was 70px wide,
+    because at that size nearly all of it is edge. It stops working as soon as the
+    band opens: the middle becomes a plain translucent rectangle, which reads as a
+    veil over the panel instead of light on it.
     """
     w, h = panel.size
-    streak = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    ImageDraw.Draw(streak).polygon(
-        [(x, 0), (x + cfg.sheen_width, 0), (x + cfg.sheen_width - h, h), (x - h, h)],
-        fill=(255, 255, 255, cfg.sheen),
+    width = int(width)
+    if width < 2 or alpha <= 0:
+        return panel
+
+    row = Image.new("L", (width, 1))
+    row.putdata([int(alpha * _bell(i / (width - 1), cfg.sheen_shape))
+                 for i in range(width)])
+    band = row.resize((width, h), Image.NEAREST)
+
+    # Padded so the shear has somewhere to come from at both edges.
+    pad = h * 2 + width
+    canvas = Image.new("L", (w + pad * 2, h), 0)
+    canvas.paste(band, (int(centre - width / 2) + pad, 0))
+    sheared = canvas.transform(
+        (w, h), Image.AFFINE, (1, 1, pad, 0, 1, 0), resample=Image.BILINEAR
     )
-    streak = streak.filter(ImageFilter.GaussianBlur(cfg.sheen_blur))
-    streak.putalpha(
-        Image.composite(streak.split()[3], Image.new("L", (w, h), 0), panel.split()[3])
+    if cfg.sheen_blur:
+        sheared = sheared.filter(ImageFilter.GaussianBlur(cfg.sheen_blur))
+
+    layer = Image.new("RGBA", (w, h), (255, 255, 255, 0))
+    layer.putalpha(
+        Image.composite(sheared, Image.new("L", (w, h), 0), panel.split()[3])
     )
-    return Image.alpha_composite(panel, streak)
+    return Image.alpha_composite(panel, layer)
 
 
 def _sheen_period(panel: Image.Image, cfg: Config) -> int:
     """
     The distance the reflection travels to come back to where it started.
 
-    Panel width plus the band's own lean plus its width: everything it needs to
-    leave by one edge and arrive at the other with nothing showing in between.
+    Panel width plus the band's own lean plus its widest, so that it is clear of
+    the glass at the turn no matter how open it was on the way.
     """
-    return panel.size[0] + panel.size[1] + cfg.sheen_width
+    return panel.size[0] + panel.size[1] + cfg.sheen_width_max
 
 
 def _sheen(panel: Image.Image, cfg: Config, offset: int = 0) -> Image.Image:
@@ -356,17 +405,23 @@ def _sheen(panel: Image.Image, cfg: Config, offset: int = 0) -> Image.Image:
     Kept clear of the traffic lights when parked: the first attempt put it right
     over them and it looked like a smudge rather than a reflection.
 
-    Two bands are laid down, one period apart, so that whatever leaves by the
-    right edge is already arriving at the left one. Only one of them is ever over
-    the glass, and at offset zero the other is well off the canvas, which is why
-    a parked reflection costs exactly what it always did.
-    """
-    if not cfg.sheen:
-        return panel
+    How open it is depends on how far round the trip has got, not on where it sits
+    over the glass. Position was the obvious choice and it was wrong twice over:
+    the width jumped as the band crossed the edges, and the parked panel came out
+    at full width, which is the one state that is on screen most of the time. On
+    the clock it goes narrow, open, narrow, so the loop closes on itself and rest
+    is the discreet end of the range.
 
+    Two bands are laid down, one period apart, so that whatever leaves by the
+    right edge is already arriving at the left one.
+    """
     period = _sheen_period(panel, cfg)
-    for x in (cfg.sheen_x + offset, cfg.sheen_x + offset - period):
-        panel = _streak(panel, x, cfg)
+    k = _bell((offset % period) / period, 1.0)
+    width = cfg.sheen_width_min + (cfg.sheen_width_max - cfg.sheen_width_min) * k
+    alpha = int(cfg.sheen_alpha_max - (cfg.sheen_alpha_max - cfg.sheen_alpha_min) * k)
+
+    for centre in (cfg.sheen_x + offset, cfg.sheen_x + offset - period):
+        panel = _streak(panel, centre, alpha, width, cfg)
     return panel
 
 
@@ -394,7 +449,7 @@ def _sheen_drift(panel: Image.Image, cfg: Config) -> List[Image.Image]:
     positions than the file can afford, so the alternative is a shorter drift out
     and back, which the same number of positions can cover without stepping.
     """
-    if not cfg.sheen or cfg.sheen_steps <= 0:
+    if cfg.sheen_alpha_max <= 0 or cfg.sheen_steps <= 0:
         return []
 
     # The drift is only drawn while the line rests, and the frame loop falls back
@@ -428,7 +483,7 @@ def _sheen_drift(panel: Image.Image, cfg: Config) -> List[Image.Image]:
         # animation returns to on its own.
         period = _sheen_period(panel, cfg)
         offsets = [
-            int(period * (t * t * (3 - 2 * t)))
+            int(period * (t ** 3 * (t * (6 * t - 15) + 10)))
             for t in (i / cfg.sheen_steps for i in range(cfg.sheen_steps))
         ]
 
